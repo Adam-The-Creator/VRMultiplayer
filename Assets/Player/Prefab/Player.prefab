@@ -73005,14 +73005,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c294f24886828c94e90fa8939f84bf89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  xrDeviceSimulatorObject: {fileID: 0}
   vrCameraTransform: {fileID: 7903444137743869175}
   leftControllerTransform: {fileID: 7310895680049692525}
   rightControllerTransform: {fileID: 6902636681467332389}
-  avatar: {fileID: 0}
-  characterController: {fileID: 0}
-  leftBrush: {fileID: 5974281295069224441}
-  rightBrush: {fileID: 8379222904568743306}
 --- !u!114 &1678973919903109820
 MonoBehaviour:
   m_ObjectHideFlags: 0

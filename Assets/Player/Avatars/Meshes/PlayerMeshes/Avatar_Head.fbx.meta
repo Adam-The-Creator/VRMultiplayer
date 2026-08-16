@@ -8,37 +8,37 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Eyes
-    second: {fileID: 2100000, guid: 12dd6b1c138d94665975aea5db3cd411, type: 2}
+    second: {fileID: 2100000, guid: 7a094df7d05c8fe45be065ffe57b41ee, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: HMD_Chrome
-    second: {fileID: 2100000, guid: a0aedf40583136b4a85139a4dfbe6cad, type: 2}
+    second: {fileID: 2100000, guid: 212810a77be020543a00f5b98dc821d1, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: HMD_Pad
-    second: {fileID: 2100000, guid: 82d43eabbdbe02f469f9862c8d39c967, type: 2}
+    second: {fileID: 2100000, guid: b79bc5b573682134ab6605fc4d38b0bb, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Shirt
-    second: {fileID: 2100000, guid: 17ca3ccda0a8b9848a7f54f938f8c784, type: 2}
+    second: {fileID: 2100000, guid: 82d08307068f45044a09985b9ac7433d, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Skin
-    second: {fileID: 2100000, guid: 042d6e2f6bdad7c41852455197c567f3, type: 2}
+    second: {fileID: 2100000, guid: e2a96441d9a26df4ba573d937cfa504d, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Teeth
-    second: {fileID: 2100000, guid: 5b17520229bcebb4e847c5e0dac349ad, type: 2}
+    second: {fileID: 2100000, guid: dd10790931b8b2e4ea9ecf03155ee747, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Tongue
-    second: {fileID: 2100000, guid: 5b2d35c6c9b7dc542a0527697aa04274, type: 2}
+    second: {fileID: 2100000, guid: a4fc412abb50d7b4e9cb7ecef273c524, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
