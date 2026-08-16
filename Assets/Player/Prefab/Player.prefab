@@ -49308,7 +49308,7 @@ MonoBehaviour:
   brushEndWidth: 0.003
   brushStartColor: {r: 0, g: 0, b: 0, a: 1}
   brushEndColor: {r: 0, g: 0, b: 0, a: 1}
-  handType: 0
+  handType: -1
   paintingInputAction: {fileID: -4289430672226363583, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   currentLine: {fileID: 0}
   pointTimestamps: []
