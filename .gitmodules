@@ -1,0 +1,3 @@
+[submodule "DatabaseServer"]
+	path = DatabaseServer
+	url = https://github.com/Adam-The-Creator/DatabaseServer

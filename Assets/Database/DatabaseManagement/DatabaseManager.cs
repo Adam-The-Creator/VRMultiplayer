@@ -3,6 +3,7 @@ using Assets.Database.DatabaseManagement.SQLiteDB;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,6 +18,17 @@ namespace Assets.Database.DatabaseManagement
 {
     public class DatabaseManager : MonoBehaviour
     {
+        public enum ServerStatus
+        {
+            Offline,
+            Starting,
+            Online,
+            Error
+        }
+
+        public ServerStatus CurrentStatus { get; private set; } = ServerStatus.Offline;
+
+
         // DTOs for API communication
 
         [System.Serializable]
@@ -94,13 +106,114 @@ namespace Assets.Database.DatabaseManagement
 
 
         // Configuration
-        private static readonly string apiUrl = "http://127.0.0.1:8000";
+        private static string apiUrl = "http://127.0.0.1:8000";
         private static readonly string _database = "VRDrawingDB.db";
         private static string _databasePath;
-        
+        private Process pythonServerProcess;
+
         void Start()
         {
             _databasePath = Path.Combine(Application.persistentDataPath, _database);
+        }
+
+
+        // -------------------------------------------------------------------
+        // Server Management
+        // -------------------------------------------------------------------
+
+        public async Task StartDBServerIfNeeded()
+        {
+            // Apply config URL if available
+            if (ConfigurationManager.CurrentConfig != null && !string.IsNullOrEmpty(ConfigurationManager.CurrentConfig.RemoteServerURL))
+            {
+                apiUrl = ConfigurationManager.CurrentConfig.RemoteServerURL;
+            }
+
+            CurrentStatus = ServerStatus.Starting;
+            UnityEngine.Debug.Log("[DB] Checking if Database Server is online...");
+
+            // 1. Try to ping the server first to see if it's already running
+            bool isOnline = await PingServer();
+
+            if (isOnline)
+            {
+                CurrentStatus = ServerStatus.Online;
+                UnityEngine.Debug.Log("[DB] Database server is already running and responding.");
+                return;
+            }
+
+            // 2. If it's not online, and we are in Local mode, start it
+            if (ConfigurationManager.CurrentConfig != null && ConfigurationManager.CurrentConfig.DatabaseMode == "Local")
+            {
+                UnityEngine.Debug.Log("[DB] Server not found. Attempting to start local Python process...");
+                StartLocalProcess();
+
+                // Wait a few seconds for the Python app to fully boot up
+                await Task.Delay(3000);
+
+                // Verify it started successfully
+                if (await PingServer())
+                {
+                    CurrentStatus = ServerStatus.Online;
+                    UnityEngine.Debug.Log("[DB] Local Python server started and verified online.");
+                }
+                else
+                {
+                    CurrentStatus = ServerStatus.Error;
+                    UnityEngine.Debug.LogError("[DB] Python process launched, but API is not responding.");
+                }
+            }
+            else
+            {
+                CurrentStatus = ServerStatus.Error;
+                UnityEngine.Debug.LogError($"[DB] Remote server at {apiUrl} is offline or unreachable.");
+            }
+        }
+
+        private async Task<bool> PingServer()
+        {
+            using UnityWebRequest request = new(apiUrl + "/", "GET");
+            request.timeout = 3;
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            var operation = request.SendWebRequest();
+            while (!operation.isDone) await Task.Yield();
+
+            return request.result == UnityWebRequest.Result.Success;
+        }
+
+        private void StartLocalProcess()
+        {
+            try
+            {
+                // TODO: Use the Python executable path from the .venv or configuration settings if needed
+                ProcessStartInfo startInfo = new()
+                {
+                    FileName = "python",
+                    Arguments = ConfigurationManager.CurrentConfig.LocalPythonScriptPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                pythonServerProcess = new Process { StartInfo = startInfo };
+                pythonServerProcess.Start();
+            }
+            catch (Exception e)
+            {
+                CurrentStatus = ServerStatus.Error;
+                UnityEngine.Debug.LogError($"[DB] Failed to start Python server process: {e.Message}");
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (pythonServerProcess != null && !pythonServerProcess.HasExited)
+            {
+                pythonServerProcess.Kill();
+                UnityEngine.Debug.Log("[DB] Local Python server safely shut down.");
+            }
         }
 
 
@@ -124,7 +237,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
             {
-                Debug.LogError($"API Error ({method} {endpoint}): {request.error}\nResponse: {request.downloadHandler.text}");
+                UnityEngine.Debug.LogError($"API Error ({method} {endpoint}): {request.error}\nResponse: {request.downloadHandler.text}");
                 return null;
             }
 
@@ -140,18 +253,18 @@ namespace Assets.Database.DatabaseManagement
             // TODO: Update this method to call the API to update the database changes
             if (File.Exists(_databasePath))
             {
-                Debug.Log("Database has already been initialized");
+                UnityEngine.Debug.Log("Database has already been initialized");
                 return;
             }
 
             try
             {
                 File.Copy(Path.Combine(Application.streamingAssetsPath, _database), _databasePath);
-                Debug.Log($"Database file copied to persistent data path:\n{_databasePath}");
+                UnityEngine.Debug.Log($"Database file copied to persistent data path:\n{_databasePath}");
             }
             catch (Exception ex)
             {
-                Debug.LogException(ex);
+                UnityEngine.Debug.LogException(ex);
             }
         }
 
@@ -164,7 +277,7 @@ namespace Assets.Database.DatabaseManagement
         {
             if (saveMessage == null)
             {
-                Debug.LogError("Invalid drawing data provided for saving.");
+                UnityEngine.Debug.LogError("Invalid drawing data provided for saving.");
                 return false;
             }
 
@@ -175,7 +288,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (response != null)
             {
-                Debug.Log("Drawing saved successfully via API.");
+                UnityEngine.Debug.Log("Drawing saved successfully via API.");
                 return true;
             }
             return false;
@@ -190,7 +303,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (response != null)
             {
-                Debug.Log($"Drawing imported successfully via API: {drawingData.metadata.id}");
+                UnityEngine.Debug.Log($"Drawing imported successfully via API: {drawingData.metadata.id}");
                 return true;
             }
             return false;
@@ -230,7 +343,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (response != null)
             {
-                Debug.Log($"Drawing record deleted successfully via API: ID {drawingId}");
+                UnityEngine.Debug.Log($"Drawing record deleted successfully via API: ID {drawingId}");
                 return true;
             }
             return false;
@@ -245,7 +358,7 @@ namespace Assets.Database.DatabaseManagement
         {
             if (string.IsNullOrEmpty(sessionName))
             {
-                Debug.LogError("Invalid session name.");
+                UnityEngine.Debug.LogError("Invalid session name.");
                 return null;
             }
 
@@ -264,7 +377,7 @@ namespace Assets.Database.DatabaseManagement
             if (response != null)
             {
                 Session session = JsonConvert.DeserializeObject<Session>(response);
-                Debug.Log($"Session saved successfully: {session.name}");
+                UnityEngine.Debug.Log($"Session saved successfully: {session.name}");
                 return session.id;
             }
             return null;
@@ -288,7 +401,7 @@ namespace Assets.Database.DatabaseManagement
             string response = await SendRequest($"/sessions/{sessionId}/close", "PUT");
             if (response != null)
             {
-                Debug.Log($"Session {sessionId} closed successfully.");
+                UnityEngine.Debug.Log($"Session {sessionId} closed successfully.");
                 return true;
             }
             return false;
@@ -301,7 +414,7 @@ namespace Assets.Database.DatabaseManagement
             string response = await SendRequest($"/sessions/{sessionId}", "DELETE");
             if (response != null)
             {
-                Debug.Log($"Session {sessionId} deleted successfully.");
+                UnityEngine.Debug.Log($"Session {sessionId} deleted successfully.");
                 return true;
             }
             return false;
@@ -366,7 +479,7 @@ namespace Assets.Database.DatabaseManagement
         {
             if (loginMessage == null || string.IsNullOrEmpty(loginMessage.username) || string.IsNullOrEmpty(loginMessage.password))
             {
-                Debug.LogError("Login message is invalid.");
+                UnityEngine.Debug.LogError("Login message is invalid.");
                 return null;
             }
 
@@ -376,7 +489,7 @@ namespace Assets.Database.DatabaseManagement
             if (response != null)
             {
                 var authRes = JsonConvert.DeserializeObject<AuthResponse>(response);
-                Debug.Log("Login successful.");
+                UnityEngine.Debug.Log("Login successful.");
                 return authRes.playerId;
             }
             return null;
@@ -386,7 +499,7 @@ namespace Assets.Database.DatabaseManagement
         {
             if (signUpMessage == null || string.IsNullOrEmpty(signUpMessage.username) || string.IsNullOrEmpty(signUpMessage.password))
             {
-                Debug.LogError("Sign up message is invalid.");
+                UnityEngine.Debug.LogError("Sign up message is invalid.");
                 return false;
             }
 
@@ -395,7 +508,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (response != null)
             {
-                Debug.Log("User signed up successfully.");
+                UnityEngine.Debug.Log("User signed up successfully.");
                 return true;
             }
             return false;
@@ -461,7 +574,7 @@ namespace Assets.Database.DatabaseManagement
 
             if (response != null)
             {
-                Debug.Log($"PlayerInfo updated successfully via API (ID: {userId}).");
+                UnityEngine.Debug.Log($"PlayerInfo updated successfully via API (ID: {userId}).");
                 return true;
             }
             return false;
