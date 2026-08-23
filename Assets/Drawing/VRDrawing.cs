@@ -1,7 +1,9 @@
-﻿using FishNet.Object;
-using UnityEngine;
+﻿using Assets.Database.DatabaseManagement;
 using Assets.Database.DatabaseManagement.MongoDB;
+using FishNet.Object;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using UnityEngine;
 
 public class VRDrawing : NetworkBehaviour
 {
@@ -79,6 +81,54 @@ public class VRDrawing : NetworkBehaviour
                 // TODO: Find the physical GameObject with this lineId and disable its renderer/collider
                 break;
             }
+        }
+    }
+
+    // --- DATABASE SAVE ---
+
+    // Called by a UI Button click
+    public void RequestSaveDrawing(string drawingName, string ownerId, GameType gameType, string sessionId)
+    {
+        // Tell the authoritative server to initiate the save process
+        CmdSaveDrawingToDatabase(drawingName, ownerId, gameType, sessionId);
+    }
+
+    // 1. The RPC must be standard void, NOT async.
+    [ServerRpc(RequireOwnership = false)]
+    private void CmdSaveDrawingToDatabase(string drawingName, string ownerId, GameType gameType, string sessionId)
+    {
+        // 2. Launch the asynchronous database task without awaiting it directly in the RPC signature
+        _ = SaveDrawingTaskAsync(drawingName, ownerId, gameType, sessionId);
+    }
+
+    // 3. The actual async logic happens here, safely isolated from FishNet's code generator
+    private async Task SaveDrawingTaskAsync(string drawingName, string ownerId, GameType gameType, string sessionId)
+    {
+        // Only the Server executes this database call
+        DatabaseManager.DrawingSaveMessage payload = new()
+        {
+            name = drawingName,
+            owner = ownerId,
+            collaborators = new List<Collaborator>(), // TODO: Get the collaborators
+            version = "1.0",
+            gameType = gameType,
+            sessionID = sessionId,
+            lines = this.drawing.lines,
+            trackedBehaviors = this.drawing.trackedBehaviors,
+            placedModels = this.drawing.placedModels,
+        };
+
+        bool success = await DatabaseManager.Instance.SaveDrawing(payload);
+
+        if (success)
+        {
+            Debug.Log($"[DB] Drawing '{drawingName}' successfully committed to MongoDB and SQLite.");
+            // Optional: You could send an ObserversRpc back to clients here 
+            // to update their UI text to "Save Successful!"
+        }
+        else
+        {
+            Debug.LogError($"[DB] Failed to save drawing '{drawingName}'.");
         }
     }
 }

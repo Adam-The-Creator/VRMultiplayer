@@ -1,295 +1,312 @@
-//using System;
-//using System.Collections.Generic;
-//using TMPro;
-//using Unity.VisualScripting;
-//using UnityEngine;
-//using UnityEngine.UI;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
-//public class AuthManager : MonoBehaviour
-//{
-//    [Serializable] public class AuthPanel
-//    {
-//        [Header("Login Panel Elements")]
-//        public GameObject panelObject;
-//        public TMP_InputField usernameInput;
-//        public TMP_InputField passwordInput;
-//        public Button loginButton;
-//        public Button signupButton;
-//        public TMP_Text feedbackText;
+using Assets.Database.DatabaseManagement;
+using Assets.Database.DatabaseManagement.SQLiteDB;
 
-//        public virtual void Initialize()
-//        {
-//            ClearFeedback();
-//            usernameInput.text = "";
-//            usernameInput.placeholder.GetComponent<TMP_Text>().text = "Username";
-//            passwordInput.text = "";
-//            passwordInput.placeholder.GetComponent<TMP_Text>().text = "Password";
-//        }
+public class AuthManager : MonoBehaviour
+{
+    [Serializable]
+    public class AuthPanel
+    {
+        [Header("Login Panel Elements")]
+        public GameObject panelObject;
+        public TMP_InputField usernameInput;
+        public TMP_InputField passwordInput;
+        public Button loginButton;
+        public Button signupButton;
+        public TMP_Text feedbackText;
 
-//        public void WriteFeedbackError(string message)
-//        {
-//            if (feedbackText != null)
-//            {
-//                feedbackText.color = Color.red;
-//                feedbackText.text = message;
-//            }
-//        }
+        public virtual void Initialize()
+        {
+            ClearFeedback();
+            usernameInput.text = "";
+            usernameInput.placeholder.GetComponent<TMP_Text>().text = "Username";
+            passwordInput.text = "";
+            passwordInput.placeholder.GetComponent<TMP_Text>().text = "Password";
+        }
 
-//        public void WriteFeedback(string message)
-//        {
-//            if (feedbackText != null)
-//            {
-//                feedbackText.color = Color.white;
-//                feedbackText.text = message;
-//            }
-//        }
+        public void WriteFeedbackError(string message)
+        {
+            if (feedbackText != null)
+            {
+                feedbackText.color = Color.red;
+                feedbackText.text = message;
+            }
+        }
 
-//        public void ClearFeedback()
-//        {
-//            if (feedbackText != null) feedbackText.text = "";
-//        }
+        public void WriteFeedback(string message)
+        {
+            if (feedbackText != null)
+            {
+                feedbackText.color = Color.white;
+                feedbackText.text = message;
+            }
+        }
 
-//        public void SetActive(bool visibility = true)
-//        {
-//            panelObject.SetActive(visibility);
-//        }
-//    }
+        public void ClearFeedback()
+        {
+            if (feedbackText != null) feedbackText.text = "";
+        }
 
-//    [Serializable] public class LoginPanel : AuthPanel
-//    {
-//        public event Action OnLoginButtonClicked;
-//        public event Action OnSignupButtonClicked;
+        public void SetActive(bool visibility = true)
+        {
+            panelObject.SetActive(visibility);
+        }
+    }
 
-//        public override void Initialize()
-//        {
-//            base.Initialize();
-//            loginButton.onClick.RemoveAllListeners();
-//            signupButton.onClick.RemoveAllListeners();
+    [Serializable]
+    public class LoginPanel : AuthPanel
+    {
+        public event Action OnLoginButtonClicked;
+        public event Action OnSignupButtonClicked;
 
-//            loginButton.onClick.AddListener(() => { OnLoginButtonClicked?.Invoke(); });
-//            signupButton.onClick.AddListener(() => { OnSignupButtonClicked?.Invoke(); });
-//        }
+        public override void Initialize()
+        {
+            base.Initialize();
+            loginButton.onClick.RemoveAllListeners();
+            signupButton.onClick.RemoveAllListeners();
 
-//        public bool Login()
-//        {
-//            string username = usernameInput.text;
-//            string password = passwordInput.text;
+            loginButton.onClick.AddListener(() => { OnLoginButtonClicked?.Invoke(); });
+            signupButton.onClick.AddListener(() => { OnSignupButtonClicked?.Invoke(); });
+        }
 
-//            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-//            {
-//                Debug.LogWarning("Username or Password field is empty for login.");
-//                WriteFeedbackError("Username and password are required!");
-//                return false;
-//            }
+        // Converted to async Task<bool>
+        public async Task<bool> LoginAsync()
+        {
+            string username = usernameInput.text;
+            string password = passwordInput.text;
 
-//            WriteFeedback("Login in progress...");
-//            Debug.Log($"Attempting login for user: {username}");
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                Debug.LogWarning("Username or Password field is empty for login.");
+                WriteFeedbackError("Username and password are required!");
+                return false;
+            }
 
-//            var loginMessage = new DatabaseManager.LoginMessage { Username = username, Password = password };
-//            string userId = DatabaseManager.Instance.Login(loginMessage);
+            WriteFeedback("Login in progress...");
+            Debug.Log($"Attempting login for user: {username}");
 
-//            if (!string.IsNullOrEmpty(userId))
-//            {
-//                Debug.Log($"Login successful! User ID: {userId}");
-//                PlayerPrefs.SetString("CurrentUserID", userId);
-//                PlayerPrefs.SetString("CurrentUsername", usernameInput.text);
-//                PlayerPrefs.Save();
+            var loginMessage = new DatabaseManager.LoginMessage { username = username, password = password };
 
-//                WriteFeedback($"Logged in : {PlayerPrefs.GetString("CurrentUsername")}");
-//                return true;
-//            }
+            // Await the asynchronous database call
+            string userId = await DatabaseManager.Instance.Login(loginMessage);
 
-//            Debug.LogWarning("Login failed.");
-//            WriteFeedbackError("Wrong username or password!");
+            if (!string.IsNullOrEmpty(userId))
+            {
+                Debug.Log($"Login successful! User ID: {userId}");
+                PlayerPrefs.SetString("CurrentUserID", userId);
+                PlayerPrefs.SetString("CurrentUsername", usernameInput.text);
+                PlayerPrefs.Save();
 
-//            return false;
-//        }
-//    }
+                WriteFeedback($"Logged in : {PlayerPrefs.GetString("CurrentUsername")}");
+                return true;
+            }
 
-//    [Serializable] public class SignupPanel : AuthPanel
-//    {
-//        public TMP_Dropdown roleDropdown;
-//        public event Action OnLoginButtonClicked;
-//        public event Action OnSignUpButtonClicked;
-//        private DatabaseManager.Role selectedRole = DatabaseManager.Role.Player;
+            Debug.LogWarning("Login failed.");
+            WriteFeedbackError("Wrong username or password!");
 
-//        public override void Initialize()
-//        {
-//            base.Initialize();
+            return false;
+        }
+    }
 
-//            loginButton.onClick.RemoveAllListeners();
-//            signupButton.onClick.RemoveAllListeners();
+    [Serializable]
+    public class SignupPanel : AuthPanel
+    {
+        public TMP_Dropdown roleDropdown;
+        public event Action OnLoginButtonClicked;
+        public event Action OnSignUpButtonClicked;
 
-//            signupButton.onClick.AddListener(() => { OnSignUpButtonClicked?.Invoke(); });
-//            loginButton.onClick.AddListener(() => { OnLoginButtonClicked?.Invoke(); });
+        // Changed to use the Role enum from SQLiteDB namespace
+        private Role selectedRole = Role.Player;
 
-//            selectedRole = DatabaseManager.Role.Player;
-//            roleDropdown.ClearOptions();
-//            roleDropdown.AddOptions(new List<string> { "Player", "Psychologist" });
-//            roleDropdown.value = (int)selectedRole;
-//            roleDropdown.RefreshShownValue();
-//            roleDropdown.onValueChanged.RemoveAllListeners();
-//            roleDropdown.onValueChanged.AddListener((int index) =>
-//            {
-//                selectedRole = (DatabaseManager.Role)index;
-//                Debug.Log($"SignupPanel: Selected role changed to {selectedRole}");
-//            });
-//        }
+        public override void Initialize()
+        {
+            base.Initialize();
 
-//        public bool Signup()
-//        {
-//            string username = usernameInput.text;
-//            string password = passwordInput.text;
+            loginButton.onClick.RemoveAllListeners();
+            signupButton.onClick.RemoveAllListeners();
 
-//            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-//            {
-//                Debug.LogWarning("LobbyManager: Username or Password field is empty for sign up.");
-//                WriteFeedbackError("Username and password are required!");
-//                return false;
-//            }
+            signupButton.onClick.AddListener(() => { OnSignUpButtonClicked?.Invoke(); });
+            loginButton.onClick.AddListener(() => { OnLoginButtonClicked?.Invoke(); });
 
-//            WriteFeedback("Sign up in progress...");
-//            Debug.Log($"LobbyManager: Attempting sign up for user: {username}");
+            selectedRole = Role.Player;
+            roleDropdown.ClearOptions();
+            roleDropdown.AddOptions(new List<string> { "Player", "Psychologist" });
+            roleDropdown.value = (int)selectedRole;
+            roleDropdown.RefreshShownValue();
+            roleDropdown.onValueChanged.RemoveAllListeners();
+            roleDropdown.onValueChanged.AddListener((int index) =>
+            {
+                selectedRole = (Role)index;
+                Debug.Log($"SignupPanel: Selected role changed to {selectedRole}");
+            });
+        }
 
-//            var signUpMessage = new DatabaseManager.SignUpMessage { Username = username, Password = password, Role = (int)selectedRole };
-//            bool success = DatabaseManager.Instance.SignUp(signUpMessage);
+        // Converted to async Task<bool>
+        public async Task<bool> SignupAsync()
+        {
+            string username = usernameInput.text;
+            string password = passwordInput.text;
 
-//            if (success)
-//            {
-//                Debug.Log("LobbyManager: Sign up successful!");
-//                WriteFeedback("Successful registration!");
-//                if (usernameInput != null) usernameInput.text = "";
-//                if (passwordInput != null) passwordInput.text = "";
-//                return true;
-//            }
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                Debug.LogWarning("AuthManager: Username or Password field is empty for sign up.");
+                WriteFeedbackError("Username and password are required!");
+                return false;
+            }
 
-//            Debug.LogWarning("LobbyManager: Sign up failed (e.g., username taken).");
-//            WriteFeedbackError("Sign up failed! Username may be taken.");
+            WriteFeedback("Sign up in progress...");
+            Debug.Log($"AuthManager: Attempting sign up for user: {username}");
 
-//            return false;
-//        }
-//    }
+            var signUpMessage = new DatabaseManager.SignUpMessage { username = username, password = password, role = (int)selectedRole };
 
-//    [Header("Authentication Panels")]
-//    [SerializeField] private LoginPanel loginPanel;
-//    [SerializeField] private SignupPanel signupPanel;
+            // Await the asynchronous database call
+            bool success = await DatabaseManager.Instance.SignUp(signUpMessage);
 
-//    public event Action OnLogIn;
-//    public event Action OnLogout;
-//    public event Action OnSignUp;
+            if (success)
+            {
+                Debug.Log("AuthManager: Sign up successful!");
+                WriteFeedback("Successful registration!");
+                if (usernameInput != null) usernameInput.text = "";
+                if (passwordInput != null) passwordInput.text = "";
+                return true;
+            }
 
-//    void Start()
-//    {
-//        //// PANEL TESTING PURPOSES: Clear any existing user session on start
-//        //if (PlayerPrefs.HasKey("CurrentUserID"))
-//        //{
-//        //    Debug.Log("Current User ID: " + PlayerPrefs.GetString("CurrentUserID"));
-//        //    PlayerPrefs.DeleteKey("CurrentUserID");
-//        //}
+            Debug.LogWarning("AuthManager: Sign up failed (e.g., username taken).");
+            WriteFeedbackError("Sign up failed! Username may be taken.");
 
-//        loginPanel.Initialize();
-//        signupPanel.Initialize();
+            return false;
+        }
+    }
 
-//        loginPanel.OnLoginButtonClicked += () =>
-//        {
-//            if (loginPanel.Login())
-//            {
-//                loginPanel.SetActive(false);
-//                signupPanel.SetActive(false);
-//                OnLogIn?.Invoke();
-//            }
-//        };
-//        loginPanel.OnSignupButtonClicked += () =>
-//        {
-//            loginPanel.SetActive(false);
-//            signupPanel.SetActive(true);
-//            signupPanel.Initialize();
-//        };
+    [Header("Authentication Panels")]
+    [SerializeField] private LoginPanel loginPanel;
+    [SerializeField] private SignupPanel signupPanel;
 
-//        signupPanel.OnLoginButtonClicked += () =>
-//        {
-//            signupPanel.SetActive(false);
-//            loginPanel.SetActive(true);
-//            loginPanel.Initialize();
-//        };
-//        signupPanel.OnSignUpButtonClicked += () =>
-//        {
-//            if (signupPanel.Signup())
-//            {
-//                signupPanel.SetActive(false);
-//                loginPanel.SetActive(true);
-//                loginPanel.Initialize();
-//                OnSignUp?.Invoke();
-//            }
-//        };
+    public event Action OnLogIn;
+    public event Action OnLogout;
+    public event Action OnSignUp;
 
-//        if (IsLoggedIn())
-//        {
-//            loginPanel.SetActive(false);
-//            signupPanel.SetActive(false);
-//        }
-//        else
-//        {
-//            loginPanel.SetActive(true);
-//            signupPanel.SetActive(false);
-//        }
-//    }
+    void Start()
+    {
+        loginPanel.Initialize();
+        signupPanel.Initialize();
 
-//    public void Logout()
-//    {
-//        if (!IsLoggedIn())
-//        {
-//            Debug.LogWarning("LobbyManager: No user is currently logged in.");
-//            return;
-//        }
-//        Debug.Log($"LobbyManager: Logging out user: {GetCurrentUsername()}");
+        // Convert the lambda to an async void to await the login process
+        loginPanel.OnLoginButtonClicked += async () =>
+        {
+            // Call the async login method
+            if (await loginPanel.LoginAsync())
+            {
+                loginPanel.SetActive(false);
+                signupPanel.SetActive(false);
+                OnLogIn?.Invoke();
+            }
+        };
 
-//        PlayerPrefs.DeleteKey("CurrentUserID");
-//        PlayerPrefs.DeleteKey("CurrentUsername");
-//        PlayerPrefs.DeleteKey("DrawingToLoad");
-//        PlayerPrefs.DeleteKey("LoadMode");
-//        PlayerPrefs.Save();
+        loginPanel.OnSignupButtonClicked += () =>
+        {
+            loginPanel.SetActive(false);
+            signupPanel.SetActive(true);
+            signupPanel.Initialize();
+        };
 
-//        loginPanel.Initialize();
-//        signupPanel.Initialize();
-//        loginPanel.SetActive(true);
-//        signupPanel.SetActive(false);
+        signupPanel.OnLoginButtonClicked += () =>
+        {
+            signupPanel.SetActive(false);
+            loginPanel.SetActive(true);
+            loginPanel.Initialize();
+        };
 
-//        OnLogout?.Invoke();
-//    }
+        // Convert the lambda to an async void to await the signup process
+        signupPanel.OnSignUpButtonClicked += async () =>
+        {
+            // Call the async signup method
+            if (await signupPanel.SignupAsync())
+            {
+                signupPanel.SetActive(false);
+                loginPanel.SetActive(true);
+                loginPanel.Initialize();
+                OnSignUp?.Invoke();
+            }
+        };
 
-//    public static bool IsLoggedIn()
-//    {
-//        return PlayerPrefs.HasKey("CurrentUserID") && !string.IsNullOrEmpty(PlayerPrefs.GetString("CurrentUserID", null));
-//    }
+        if (IsLoggedIn())
+        {
+            loginPanel.SetActive(false);
+            signupPanel.SetActive(false);
+        }
+        else
+        {
+            loginPanel.SetActive(true);
+            signupPanel.SetActive(false);
+        }
+    }
 
-//    public static string GetCurrentUsername()
-//    {
-//        return PlayerPrefs.GetString("CurrentUsername", null);
-//    }
+    public void Logout()
+    {
+        if (!IsLoggedIn())
+        {
+            Debug.LogWarning("AuthManager: No user is currently logged in.");
+            return;
+        }
+        Debug.Log($"AuthManager: Logging out user: {GetCurrentUsername()}");
 
-//    public static string GetCurrentUserID()
-//    {
-//        return PlayerPrefs.GetString("CurrentUserID", null);
-//    }
+        PlayerPrefs.DeleteKey("CurrentUserID");
+        PlayerPrefs.DeleteKey("CurrentUsername");
+        PlayerPrefs.DeleteKey("DrawingToLoad");
+        PlayerPrefs.DeleteKey("LoadMode");
+        PlayerPrefs.Save();
 
-//    public static DatabaseManager.Role GetCurrentUserRole()
-//    {
-//        string userId = GetCurrentUserID();
-//        if (string.IsNullOrEmpty(userId))
-//        {
-//            Debug.LogWarning("AuthManager: No user is currently logged in.");
-//            return DatabaseManager.Role.None;
-//        }
-//        DatabaseManager.Role role = DatabaseManager.Instance.GetRole(userId);
-//        Debug.Log($"AuthManager: Current user role is {role}");
-//        return role;
-//    }
+        loginPanel.Initialize();
+        signupPanel.Initialize();
+        loginPanel.SetActive(true);
+        signupPanel.SetActive(false);
 
-//    public void InitializeEvents()
-//    {
-//        OnLogIn = null;
-//        OnLogout = null;
-//        OnSignUp = null;
-//    }
-//}
+        OnLogout?.Invoke();
+    }
+
+    public static bool IsLoggedIn()
+    {
+        return PlayerPrefs.HasKey("CurrentUserID") && !string.IsNullOrEmpty(PlayerPrefs.GetString("CurrentUserID", null));
+    }
+
+    public static string GetCurrentUsername()
+    {
+        return PlayerPrefs.GetString("CurrentUsername", null);
+    }
+
+    public static string GetCurrentUserID()
+    {
+        return PlayerPrefs.GetString("CurrentUserID", null);
+    }
+
+    // Since GetRole is async in DatabaseManager, you either need to make this async,
+    // or retrieve the role synchronously if absolutely necessary. 
+    // Here is the async version:
+    public static async Task<Role> GetCurrentUserRoleAsync()
+    {
+        string userId = GetCurrentUserID();
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogWarning("AuthManager: No user is currently logged in.");
+            return Role.None;
+        }
+
+        Role role = await DatabaseManager.Instance.GetRole(userId);
+        Debug.Log($"AuthManager: Current user role is {role}");
+        return role;
+    }
+
+    public void InitializeEvents()
+    {
+        OnLogIn = null;
+        OnLogout = null;
+        OnSignUp = null;
+    }
+}
