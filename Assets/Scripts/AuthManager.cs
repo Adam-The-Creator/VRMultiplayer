@@ -75,7 +75,6 @@ public class AuthManager : MonoBehaviour
             signupButton.onClick.AddListener(() => { OnSignupButtonClicked?.Invoke(); });
         }
 
-        // Converted to async Task<bool>
         public async Task<bool> LoginAsync()
         {
             string username = usernameInput.text;
@@ -121,7 +120,6 @@ public class AuthManager : MonoBehaviour
         public event Action OnLoginButtonClicked;
         public event Action OnSignUpButtonClicked;
 
-        // Changed to use the Role enum from SQLiteDB namespace
         private Role selectedRole = Role.Player;
 
         public override void Initialize()
@@ -147,7 +145,6 @@ public class AuthManager : MonoBehaviour
             });
         }
 
-        // Converted to async Task<bool>
         public async Task<bool> SignupAsync()
         {
             string username = usernameInput.text;
@@ -257,10 +254,7 @@ public class AuthManager : MonoBehaviour
         }
         Debug.Log($"AuthManager: Logging out user: {GetCurrentUsername()}");
 
-        PlayerPrefs.DeleteKey("CurrentUserID");
-        PlayerPrefs.DeleteKey("CurrentUsername");
-        PlayerPrefs.DeleteKey("DrawingToLoad");
-        PlayerPrefs.DeleteKey("LoadMode");
+        PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
 
         loginPanel.Initialize();

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2818748312675305896
+--- !u!1 &7002043968600705884
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,74 +8,52 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8106700230239992169}
-  - component: {fileID: 5973354494876253886}
-  - component: {fileID: 2748792041904475408}
+  - component: {fileID: 6024373428066078801}
+  - component: {fileID: 6705306864419487623}
+  - component: {fileID: 2828143681505582294}
+  - component: {fileID: 4930124476875516217}
   m_Layer: 0
-  m_Name: Drawing
-  m_TagString: Drawing
+  m_Name: DrawingSceneManager
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8106700230239992169
+--- !u!4 &6024373428066078801
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2818748312675305896}
+  m_GameObject: {fileID: 7002043968600705884}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.28068528, y: 1.7427917, z: -0.04966688}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5973354494876253886
+--- !u!114 &6705306864419487623
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2818748312675305896}
+  m_GameObject: {fileID: 7002043968600705884}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bdd66b3d39dc5e646aff19ff727fd0b6, type: 3}
+  m_Script: {fileID: 11500000, guid: 9add0248926ece84d85e88844ac64cbf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _componentIndexCache: 0
-  _addedNetworkObject: {fileID: 2748792041904475408}
-  _networkObjectCache: {fileID: 2748792041904475408}
   defaultLineMaterial: {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
-  drawing:
-    metadata:
-      id: 
-      owner: 
-      version: 
-      date: 
-      gameType: 0
-      sessionID: 
-      showBoy: 0
-      showGirl: 0
-      sadChildCoordinates:
-        x: 0
-        y: 0
-        z: 0
-        forwardX: 0
-        forwardY: 0
-        forwardZ: 0
-    lines: []
-    trackedBehaviors: []
-    placedModels: []
---- !u!114 &2748792041904475408
+--- !u!114 &2828143681505582294
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2818748312675305896}
+  m_GameObject: {fileID: 7002043968600705884}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
@@ -88,7 +66,7 @@ MonoBehaviour:
   <PredictedSpawn>k__BackingField: {fileID: 0}
   <PredictedOwner>k__BackingField: {fileID: 0}
   NetworkBehaviours:
-  - {fileID: 5973354494876253886}
+  - {fileID: 4930124476875516217}
   InitializedParentNetworkBehaviour: {fileID: 0}
   InitializedNestedNetworkObjects: []
   RuntimeParentNetworkBehaviour: {fileID: 0}
@@ -99,7 +77,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584135953679014891
+  _initializedTimestamp: -8584135798306851197
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
   _useRootLevelOfDetail: 1
@@ -118,12 +96,27 @@ MonoBehaviour:
   _spectatorInterpolation: 2
   _enableTeleport: 0
   _teleportThreshold: 1
-  <PrefabId>k__BackingField: 9
+  <PrefabId>k__BackingField: 13
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 14350690062722256667
+  <AssetPathHash>k__BackingField: 17395621661054596533
   SceneId: 0
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
+    Position: {x: -0.28068528, y: 1.7427917, z: -0.04966688}
     Rotation: {x: 0, y: 0, z: 0, w: 1}
     Scale: {x: 1, y: 1, z: 1}
     IsValid: 1
+--- !u!114 &4930124476875516217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7002043968600705884}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a6a39c46bf52104ba8efe3100bce3f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 0
+  _addedNetworkObject: {fileID: 2828143681505582294}
+  _networkObjectCache: {fileID: 2828143681505582294}

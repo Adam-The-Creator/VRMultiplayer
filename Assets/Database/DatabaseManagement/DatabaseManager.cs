@@ -237,6 +237,10 @@ namespace Assets.Database.DatabaseManagement
 
             if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
             {
+                if (request.responseCode == 404)
+                {
+                    return request.downloadHandler.text;
+                }
                 UnityEngine.Debug.LogError($"API Error ({method} {endpoint}): {request.error}\nResponse: {request.downloadHandler.text}");
                 return null;
             }
@@ -423,6 +427,12 @@ namespace Assets.Database.DatabaseManagement
         public async Task<string> GetLatestSessionId()
         {
             string response = await SendRequest("/sessions/latest/id", "GET");
+            if (response != null && response.Contains("\"detail\""))
+            {
+                UnityEngine.Debug.Log("[DB] No sessions found in the database. Returning null.");
+                return null;
+            }
+
             return response != null ? JsonConvert.DeserializeObject<string>(response) : null;
         }
 

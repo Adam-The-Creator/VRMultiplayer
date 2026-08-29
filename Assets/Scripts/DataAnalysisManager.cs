@@ -206,7 +206,6 @@ public class DataAnalysisManager : MonoBehaviour
         {
             await base.InitializeAsync();
 
-            // Replaced FileHandler with Application.persistentDataPath
             defaultReportPath = Path.Combine(Application.persistentDataPath, "VRDrawing3D", "Reports");
 
             OnGenerateReportsButtonClicked = null;
@@ -287,7 +286,6 @@ public class DataAnalysisManager : MonoBehaviour
         public readonly int itemsPerPage = 7;
         public string selectedSessionId = null;
 
-        // Refactored to DrawingMeta
         public List<DrawingMeta> selectedSessionDrawings = new();
         public List<List<string>> pageContents = new();
 
@@ -387,10 +385,16 @@ public class DataAnalysisManager : MonoBehaviour
         await dataAnalysisPanel.InitializeAsync();
         await sessionDrawingsPanel.InitializeAsync();
 
-        bool showBoy = await DatabaseManager.Instance.GetShowBoyForSession(dataAnalysisPanel.selectedSessionID);
-        bool showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
+        bool showBoy = false;
+        bool showGirl = false;
 
-        PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(showBoy));
+        if (!string.IsNullOrEmpty(dataAnalysisPanel.selectedSessionID))
+        {
+            showBoy = await DatabaseManager.Instance.GetShowBoyForSession(dataAnalysisPanel.selectedSessionID);
+            showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
+        }
+
+            PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(showBoy));
         PlayerPrefs.SetInt("ShowSadGirl", Convert.ToInt32(showGirl));
         PlayerPrefs.Save();
 
@@ -448,8 +452,14 @@ public class DataAnalysisManager : MonoBehaviour
         {
             if (!string.IsNullOrEmpty(dataAnalysisPanel.selectedSessionID))
             {
-                bool _showBoy = await DatabaseManager.Instance.GetShowBoyForSession(dataAnalysisPanel.selectedSessionID);
-                bool _showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
+                bool _showBoy = false;
+                bool _showGirl = false;
+
+                if (!string.IsNullOrEmpty(dataAnalysisPanel.selectedSessionID))
+                {
+                    _showBoy = await DatabaseManager.Instance.GetShowBoyForSession(dataAnalysisPanel.selectedSessionID);
+                    _showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
+                }
 
                 PlayerPrefs.SetString("CurrentSessionID", dataAnalysisPanel.selectedSessionID);
                 PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(_showBoy));

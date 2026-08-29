@@ -72,14 +72,21 @@ public class DrawingSpatialPanel : MonoBehaviour
             {
                 Debug.Log("Returning to Lobby Scene from Drawing Scene...");
 
-                // Keep any existing cleanup logic
                 if (FindObjectOfType<MusicManager>() != null)
                 {
                     FindObjectOfType<MusicManager>().StopMusic();
-                    Debug.Log("Music stopped when exiting to lobby");
                 }
 
-                SceneManager.LoadScene("Scenes/Login");
+                VRDrawing vrDrawing = FindObjectOfType<VRDrawing>();
+                if (vrDrawing != null)
+                {
+                    foreach (Transform child in vrDrawing.transform) Destroy(child.gameObject);
+                    vrDrawing.drawing.lines.Clear();
+                }
+
+                string environmentSceneName = gameObject.scene.name;
+                SceneManager.LoadScene("Login", LoadSceneMode.Additive);
+                SceneManager.UnloadSceneAsync(environmentSceneName);
             });
         }
         else Debug.LogWarning("Back to Lobby Button is not assigned!");

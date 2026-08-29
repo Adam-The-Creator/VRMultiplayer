@@ -60,7 +60,7 @@ public class SessionDrawingButton : MonoBehaviour
 
                     if (sceneToLoad != null)
                     {
-                        PlayerPrefs.SetString("DrawingToLoad", drawing.path);
+                        PlayerPrefs.SetString("DrawingToLoad", drawing.id);
                         PlayerPrefs.SetInt("LoadMode", 1);
                         PlayerPrefs.Save();
                         SceneManager.LoadScene(sceneToLoad);

@@ -32,7 +32,7 @@ public class Brush : MonoBehaviour
 
     [Header("Painting properties")]
     [SerializeField] private LineRenderer currentLine;
-    [SerializeField] private List<string> pointTimestamps = new();
+    [SerializeField] private List<string> pointTimestamps = new();  // TODO: IS IT NECESSARY?
     [SerializeField, Range(0.0001f, 0.1f)] float drawingTreshold = 0.01f;
     private int index = 0;
     private bool isPainting = false;
@@ -42,26 +42,21 @@ public class Brush : MonoBehaviour
     [SerializeField] public GameObject drawingObject;
 
 
-    public static readonly List<string> DrawingBlockedScenes = new() { "Login" };
-    public static readonly bool DestroyLineOnErase = false;
-
     private void Start()
     {
-        drawingObject = GameObject.FindGameObjectWithTag("Drawing");
         if (drawingObject == null)
         {
-            if (!DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name))
-            {
-                Debug.LogError("No GameObject with tag 'Drawing' found in the scene. Please add one to enable drawing functionality.");
-            }
+            VRDrawing target = FindObjectOfType<VRDrawing>();
+            if (target != null) drawingObject = target.gameObject;
         }
-
         tipMaterial.color = brushStartColor;
         drawingMode = DrawingMode.None;
     }
 
     private void Update()
     {
+        if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) return;
+
         isPainting = (float)paintingInputAction.action.ReadValue<float>() > 0.5f;
 
         if (!drawingHandMenuLeft.handMenuEnableState && !drawingHandMenuRight.handMenuEnableState)
@@ -113,6 +108,7 @@ public class Brush : MonoBehaviour
             index = 0;
             currentLine = new GameObject(name: $"{GetUniqueLineID()}").AddComponent<LineRenderer>();
             currentLine.material = paintingMaterial;
+            currentLine.useWorldSpace = true;
             currentLine.startColor = brushStartColor;
             currentLine.endColor = brushEndColor;
             currentLine.startWidth = brushStartWidth;
@@ -125,7 +121,7 @@ public class Brush : MonoBehaviour
             if (drawingObject.TryGetComponent<VRDrawing>(out VRDrawing vrDrawingData))
             {
                 Enum.TryParse(handType.ToString(), out Hand parsedHand);
-                string playerID = string.Empty; // TODO: Replace with actual user ID when available.
+                string playerID = AuthManager.GetCurrentUserID();
 
                 Line newLine = new()
                 {
@@ -146,6 +142,7 @@ public class Brush : MonoBehaviour
                             hand = parsedHand
                         }
                     },
+                    status = Status.DRAWN
                 };
 
                 pointTimestamps.Clear();
@@ -159,7 +156,7 @@ public class Brush : MonoBehaviour
             else
             {
                 //Suppress annoying error messages in scenes where drawing is blocked
-                if (DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
+                if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
                 else Debug.LogError("The drawingObject does not have a VRDrawing component attached.");
             }
         }
@@ -184,7 +181,7 @@ public class Brush : MonoBehaviour
                 }
                 else
                 {
-                    if (DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
+                    if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
                     else Debug.LogError("The drawingObject does not have a VRDrawing component attached.");
                 }
             }
@@ -200,9 +197,9 @@ public class Brush : MonoBehaviour
                 if (drawingObject.TryGetComponent<VRDrawing>(out VRDrawing vrDrawingData))
                 {
                     Enum.TryParse(handType.ToString(), out Hand parsedHand);
-                    string playerID = string.Empty; // TODO: Replace with actual user ID when available.
+                    string playerID = AuthManager.GetCurrentUserID();
 
-                    if (DestroyLineOnErase)
+                    if (ConfigurationManager.CurrentDrawingConfig.DestroyLineOnErase)
                     {
                         // If fully destroying, we might want a new CmdDestroyLine, 
                         // but for now we will still flag it erased on the network so the DB knows.

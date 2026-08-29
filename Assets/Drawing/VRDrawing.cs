@@ -5,9 +5,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
+[RequireComponent(typeof(NetworkObject))]
 public class VRDrawing : NetworkBehaviour
 {
-    public Drawing drawing = new();
+    [SerializeField] private Material defaultLineMaterial;
+    public Drawing drawing;
+
+    private void Awake()
+    {
+        // Guarantee the object and its lists are instantiated before FishNet starts
+        drawing ??= new Drawing();
+    }
 
     // --- LINE CREATION ---
 
@@ -31,8 +39,29 @@ public class VRDrawing : NetworkBehaviour
             drawing.lines.Add(newLineData);
         }
 
-        // TODO: Here, you would also instantiate the physical LineRenderer GameObject 
-        // on remote clients based on the newLineData, so they can see it.
+        // Only spawn visually for remote players. The local drawer already has the line.
+        if (newLineData.userID != AuthManager.GetCurrentUserID() && transform.Find(newLineData.id) == null)
+        {
+            GameObject lineObject = new(newLineData.id);
+            lineObject.transform.SetParent(this.transform);
+
+            LineRenderer lr = lineObject.AddComponent<LineRenderer>();
+            if (defaultLineMaterial != null) lr.material = defaultLineMaterial;
+            else lr.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+            lr.useWorldSpace = true;
+            lr.startWidth = newLineData.startWidth;
+            lr.endWidth = newLineData.endWidth;
+            lr.startColor = newLineData.startColor.ToColor();
+            lr.endColor = newLineData.endColor.ToColor();
+
+            lr.positionCount = newLineData.points.Count;
+            for (int i = 0; i < newLineData.points.Count; i++)
+            {
+                lr.SetPosition(i, newLineData.points[i].ToVector3());
+            }
+
+            lineObject.tag = "Line";
+        }
     }
 
     // --- POINT ADDITION ---
@@ -53,8 +82,16 @@ public class VRDrawing : NetworkBehaviour
             {
                 drawing.lines[i].points.Add(newPoint);
 
-                // TODO: Update the physical LineRenderer component's position count 
-                // and SetPosition on remote clients so the line visually updates.
+                // Update physical LineRenderer for remote clients
+                if (drawing.lines[i].userID != AuthManager.GetCurrentUserID())
+                {
+                    Transform lineObj = transform.Find(lineId);
+                    if (lineObj != null && lineObj.TryGetComponent<LineRenderer>(out var lr))
+                    {
+                        lr.positionCount++;
+                        lr.SetPosition(lr.positionCount - 1, newPoint.ToVector3());
+                    }
+                }
                 break;
             }
         }
@@ -78,7 +115,13 @@ public class VRDrawing : NetworkBehaviour
                 drawing.lines[idx].status = Status.ERASED;
                 drawing.lines[idx].history.Add(new LineEvent(LineEventType.ERASE, playerID, timestamp, hand));
 
-                // TODO: Find the physical GameObject with this lineId and disable its renderer/collider
+                // Find the physical GameObject with this lineId and disable its renderer/collider
+                Transform lineObj = transform.Find(lineId);
+                if (lineObj != null)
+                {
+                    if (lineObj.TryGetComponent<Renderer>(out var ren)) ren.enabled = false;
+                    if (lineObj.TryGetComponent<Collider>(out var col)) col.enabled = false;
+                }
                 break;
             }
         }

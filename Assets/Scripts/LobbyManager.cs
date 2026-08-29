@@ -228,13 +228,14 @@ public class LobbyManager : MonoBehaviour
 
                 if (loadButtonComponent != null)
                 {
+                    string currentDrawingId = drawing.id;
                     string currentDrawingPath = drawing.path;
                     string currentDrawingName = drawing.name;
                     GameType drawingGameTypeEnum = drawing.gameType;
 
                     loadButtonComponent.onClick.AddListener(() => {
-                        Debug.Log($"LobbyManager: Load button clicked for: {currentDrawingName} ({currentDrawingPath})");
-                        LoadSelectedDrawing(currentDrawingPath, drawingGameTypeEnum);
+                        Debug.Log($"LobbyManager: Load button clicked for: {currentDrawingName} ({currentDrawingId} : {currentDrawingPath})");
+                        LoadSelectedDrawing(currentDrawingId, drawingGameTypeEnum);
                     });
                 }
                 else
@@ -385,19 +386,20 @@ public class LobbyManager : MonoBehaviour
     }
 
 
-    private void LoadSelectedDrawing(string drawingPath, GameType drawingGameType)
+    private void LoadSelectedDrawing(string drawingId, GameType drawingGameType)
     {
         Debug.Log($"LobbyManager: Loading drawing from {GetGameTypeName((int)drawingGameType)} map");
 
-        PlayerPrefs.SetString("CurrentUserID", loggedInUserId);
         string sceneToLoad = GetSceneNameForGameType(drawingGameType);
 
         if (sceneToLoad != null)
         {
-            PlayerPrefs.SetString("DrawingToLoad", drawingPath); // In the new system, we might want to pass the drawing ID instead of the JSON path
+            PlayerPrefs.SetString("DrawingToLoad", drawingId);
             PlayerPrefs.SetInt("LoadMode", 1);
             PlayerPrefs.Save();
-            SceneManager.LoadScene(sceneToLoad);
+
+            SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
+            SceneManager.UnloadSceneAsync("Login");
         }
         else
         {
@@ -418,7 +420,9 @@ public class LobbyManager : MonoBehaviour
             PlayerPrefs.SetString("DrawingToLoad", "");
             PlayerPrefs.SetInt("LoadMode", 0);
             PlayerPrefs.Save();
-            SceneManager.LoadScene(sceneToLoad);
+
+            SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
+            SceneManager.UnloadSceneAsync("Login");
         }
     }
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Threading.Tasks;
 
 using Assets.Database.DatabaseManagement;
@@ -6,6 +7,7 @@ using Assets.Database.DatabaseManagement.MongoDB;
 
 public class DrawingSceneManager : MonoBehaviour
 {
+    [SerializeField] private Material defaultLineMaterial;
     private string drawingId = null;
     private const string PlayerPrefShowSadBoy = "ShowSadChild";
     private const string SadBoyName = "SadChild";
@@ -15,6 +17,8 @@ public class DrawingSceneManager : MonoBehaviour
     // Converted to async void to handle database fetches
     async void Start()
     {
+        SceneManager.SetActiveScene(gameObject.scene);
+
         drawingId = PlayerPrefs.GetString("DrawingToLoad", null);
         if (!string.IsNullOrEmpty(drawingId))
         {
@@ -24,6 +28,7 @@ public class DrawingSceneManager : MonoBehaviour
         else
         {
             Debug.Log("DrawingSceneManager: No drawing ID found in PlayerPrefs. Starting fresh.");
+            _ = ClearDrawingAsync();
         }
 
         // Fetch session info asynchronously
@@ -62,14 +67,10 @@ public class DrawingSceneManager : MonoBehaviour
             return;
         }
 
-        GameObject drawingObject = GameObject.FindGameObjectWithTag("Drawing");
-        if (drawingObject == null)
-        {
-            Debug.LogError("DrawingSceneManager: Drawing container not found in scene!");
-            return;
-        }
+        VRDrawing vrDrawingComponent = FindObjectOfType<VRDrawing>();
 
         // Clean up existing children if any
+        GameObject drawingObject = vrDrawingComponent.gameObject;
         foreach (Transform child in drawingObject.transform)
         {
             Destroy(child.gameObject);
@@ -80,23 +81,24 @@ public class DrawingSceneManager : MonoBehaviour
         {
             foreach (var ld in drawingData.lines)
             {
-                // Optionally skip rendering erased lines
-                if (ld.status == Status.ERASED) continue;
+                // Determine if the line is erased
+                bool isErased = ld.status == Status.ERASED;
 
                 var lineObject = new GameObject(ld.id);
                 lineObject.transform.SetParent(drawingObject.transform);
 
                 var lr = lineObject.AddComponent<LineRenderer>();
+                if (defaultLineMaterial != null) lr.material = defaultLineMaterial;
+                else lr.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+                lr.useWorldSpace = true;
 
-                // You may want to assign your specific drawing material here instead of Default
-                lr.material = new Material(Shader.Find("Sprites/Default"));
                 lr.positionCount = ld.points.Count;
                 lr.startWidth = ld.startWidth;
                 lr.endWidth = ld.endWidth;
 
-                // Convert your custom LineColor DTO back to Unity's Color type
-                lr.startColor = ld.startColor.ToColor();
-                lr.endColor = ld.endColor.ToColor();
+                // Convert custom LineColor DTO back to Unity's Color type
+                lr.startColor = ld.startColor != null ? ld.startColor.ToColor() : Color.black;
+                lr.endColor = ld.endColor != null ? ld.endColor.ToColor() : Color.black;
 
                 for (int i = 0; i < ld.points.Count; i++)
                 {
@@ -107,20 +109,20 @@ public class DrawingSceneManager : MonoBehaviour
                 if (lineObject.GetComponent<MeshCollider>() == null)
                 {
                     var meshCollider = lineObject.AddComponent<MeshCollider>();
-                    Mesh bakedMesh = new Mesh();
+                    Mesh bakedMesh = new();
                     lr.BakeMesh(bakedMesh, true);
                     meshCollider.sharedMesh = bakedMesh;
+
+                    if (isErased) meshCollider.enabled = false;
                 }
+
+                if (isErased) lr.enabled = false;
 
                 lineObject.tag = "Line";
             }
         }
 
-        // Apply the data payload to the local VRDrawing component so it can be updated
-        if (drawingObject.TryGetComponent<VRDrawing>(out var vrDrawingComponent))
-        {
-            vrDrawingComponent.drawing = drawingData;
-        }
+        vrDrawingComponent.drawing = drawingData;
 
         // Handle PlacedModels restoration (if your scene utilizes the ModelPlacer script)
         if (drawingData.placedModels != null && drawingData.placedModels.Count > 0)
@@ -132,5 +134,21 @@ public class DrawingSceneManager : MonoBehaviour
         }
 
         Debug.Log("Drawing Scene successfully loaded from database.");
+    }
+
+    private async Task ClearDrawingAsync()
+    {
+        VRDrawing vrDrawingComponent = FindObjectOfType<VRDrawing>();
+        while (vrDrawingComponent == null)
+        {
+            await Task.Yield();
+            vrDrawingComponent = FindObjectOfType<VRDrawing>();
+        }
+
+        foreach (Transform child in vrDrawingComponent.transform)
+        {
+            Destroy(child.gameObject);
+        }
+        vrDrawingComponent.drawing.lines.Clear();
     }
 }

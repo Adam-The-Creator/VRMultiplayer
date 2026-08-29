@@ -7,7 +7,13 @@ namespace Assets.Database.DatabaseManagement.MongoDB
     public class Drawing
     {
 
-        public Drawing() { }
+        public Drawing()
+        {
+            this.metadata = new Metadata();
+            this.lines = new List<Line>();
+            this.trackedBehaviors = new List<TrackedBehavior>();
+            this.placedModels = new List<PlacedModel>();
+        }
 
         public Drawing(
             Metadata metadata,

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
 
 [System.Serializable]
 public class ServerConfig
@@ -9,6 +10,12 @@ public class ServerConfig
     public string LocalPythonScriptPath;
 }
 
+public class DrawingConfig
+{
+    public bool DestroyLineOnErase = false;
+    public List<string> DrawingBlockedScenes = new() { "Login" };
+}
+
 public class ConfigurationManager : MonoBehaviour
 {
     // TODO: ConfigurationManager could be used for store Game settings, user preferences, and other configuration data in the future.
@@ -16,6 +23,7 @@ public class ConfigurationManager : MonoBehaviour
     //       And PlayerPrefs also could be used for store user preferences.
 
     public static ServerConfig CurrentConfig;
+    public static DrawingConfig CurrentDrawingConfig;
 
     private void Awake()
     {
@@ -31,5 +39,7 @@ public class ConfigurationManager : MonoBehaviour
         {
             Debug.LogError("config.json not found!");
         }
+
+        CurrentDrawingConfig = new DrawingConfig();
     }
 }
