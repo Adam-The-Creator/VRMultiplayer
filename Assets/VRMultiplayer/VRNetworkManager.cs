@@ -4,8 +4,20 @@ using Assets.Database.DatabaseManagement;
 
 public class VRNetworkManager : MonoBehaviour
 {
+    public static VRNetworkManager Instance { get; private set; }
+
     [Tooltip("The IP address to connect to. Use 'localhost' if running on the same machine.")]
     public string serverAddress = "localhost";
+
+    public void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(this.gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     async void Start()
     {
@@ -24,38 +36,26 @@ public class VRNetworkManager : MonoBehaviour
             UnityEngine.Debug.LogError("FishNet ServerManager or ClientManager is not initialized. Please ensure FishNet is set up correctly.");
             return; // Halt further execution if FishNet is missing
         }
-
-        // TODO: Implement a UI for the user to choose between hosting and/or joining a session.
-        //       Create roomcode (and optionally password/pincode) input field(s) for joining a session.
-        StartHostSession();
-        JoinSession();
     }
 
     public void StartHostSession()
     {
-        // TODO: Host a Session with a Roomcode (and optionally password/pincode) for others to join.
-
-
-        // Start the Server and the Client locally (Hosting)
         if (InstanceFinder.ServerManager != null && InstanceFinder.ClientManager != null)
         {
             InstanceFinder.ServerManager.StartConnection();
             InstanceFinder.ClientManager.StartConnection();
-
-            gameObject.SetActive(false);
+            Debug.Log("[Network] Host session started.");
         }
     }
 
-    public void JoinSession()
+    public void JoinSession(string address = null)
     {
-        // TODO: Join a Session with a Roomcode (and optionally password/pincode) provided by the user.
-
-        // Start the Client only, connecting to the specified IP address
         if (InstanceFinder.ClientManager != null)
         {
-            InstanceFinder.ClientManager.StartConnection(serverAddress);
+            if (!string.IsNullOrEmpty(address)) serverAddress = address;
 
-            gameObject.SetActive(false);
+            InstanceFinder.ClientManager.StartConnection(serverAddress);
+            Debug.Log($"[Network] Client connecting to {serverAddress}...");
         }
     }
 }

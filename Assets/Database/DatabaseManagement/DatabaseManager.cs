@@ -88,6 +88,24 @@ namespace Assets.Database.DatabaseManagement
             public int? multiplayer;
         }
 
+        [System.Serializable]
+        public class RoomCreateRequest
+        {
+            public string name;
+            public string sessionID;
+            public string drawingID;
+            public string hostID;
+        }
+
+        [System.Serializable]
+        public class RoomJoinResponse
+        {
+            public string roomCode;
+            public string sessionID;
+            public string drawingID;
+            public GameType gameType;
+        }
+
 
         // Singleton pattern for DatabaseManager
         private static DatabaseManager _instance;
@@ -594,9 +612,34 @@ namespace Assets.Database.DatabaseManagement
         {
             if (string.IsNullOrEmpty(userId)) return new List<DrawingMeta>();
 
-            // Updated path to reflect the players_3.py router layout
             string response = await SendRequest($"/players/{userId}/drawings", "GET");
             return response != null ? JsonConvert.DeserializeObject<List<DrawingMeta>>(response) : new List<DrawingMeta>();
+        }
+
+
+        // -------------------------------------------------------------------
+        // API calls - Rooms
+        // -------------------------------------------------------------------
+
+        public async Task<string> CreateRoom(string name, string sessionId, string drawingId, string hostId)
+        {
+            var req = new RoomCreateRequest { name = name, sessionID = sessionId, drawingID = drawingId, hostID = hostId };
+            string json = JsonConvert.SerializeObject(req);
+            string response = await SendRequest("/rooms/", "POST", json);
+
+            if (response != null)
+            {
+                // Deserialize using a temporary dictionary or directly to an ActiveRoom class if defined
+                var result = JsonConvert.DeserializeObject<Dictionary<string, string>>(response);
+                return result.ContainsKey("roomCode") ? result["roomCode"] : null;
+            }
+            return null;
+        }
+
+        public async Task<RoomJoinResponse> JoinRoom(string roomCode)
+        {
+            string response = await SendRequest($"/rooms/{roomCode}", "GET");
+            return response != null ? JsonConvert.DeserializeObject<RoomJoinResponse>(response) : null;
         }
 
     }
