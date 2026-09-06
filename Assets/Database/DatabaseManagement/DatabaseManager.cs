@@ -92,6 +92,7 @@ namespace Assets.Database.DatabaseManagement
         public class RoomCreateRequest
         {
             public string name;
+            public string roomAddress;
             public string sessionID;
             public string drawingID;
             public string hostID;
@@ -101,6 +102,7 @@ namespace Assets.Database.DatabaseManagement
         public class RoomJoinResponse
         {
             public string roomCode;
+            public string roomAddress;
             public string sessionID;
             public string drawingID;
             public GameType gameType;
@@ -621,9 +623,9 @@ namespace Assets.Database.DatabaseManagement
         // API calls - Rooms
         // -------------------------------------------------------------------
 
-        public async Task<string> CreateRoom(string name, string sessionId, string drawingId, string hostId)
+        public async Task<string> CreateRoom(string name, string roomAddress, string sessionId, string drawingId, string hostId)
         {
-            var req = new RoomCreateRequest { name = name, sessionID = sessionId, drawingID = drawingId, hostID = hostId };
+            var req = new RoomCreateRequest { name = name, roomAddress = roomAddress, sessionID = sessionId, drawingID = drawingId, hostID = hostId };
             string json = JsonConvert.SerializeObject(req);
             string response = await SendRequest("/rooms/", "POST", json);
 

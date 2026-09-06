@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Assets.Database.DatabaseManagement;
+using Steamworks;
 
 public class CreateRoomPanel : MonoBehaviour
 {
@@ -12,10 +13,6 @@ public class CreateRoomPanel : MonoBehaviour
 
     private void Start()
     {
-        // Add VR keyboard if missing
-        if (roomNameInput != null && roomNameInput.GetComponent<VRKeyboardInputField>() == null)
-            roomNameInput.gameObject.AddComponent<VRKeyboardInputField>();
-
         createRoomButton.onClick.AddListener(async () =>
         {
             createRoomButton.interactable = false;
@@ -33,7 +30,14 @@ public class CreateRoomPanel : MonoBehaviour
                 return;
             }
 
-            string code = await DatabaseManager.Instance.CreateRoom(roomName, sessionId, drawingId, hostId);
+            // Fallback to localhost, but grab the Steam ID if Steam is running
+            string hostSteamAddress = "localhost";
+            if (SteamManager.Initialized)
+            {
+                hostSteamAddress = SteamUser.GetSteamID().ToString();
+            }
+
+            string code = await DatabaseManager.Instance.CreateRoom(roomName, hostSteamAddress, sessionId, drawingId, hostId);
 
             if (!string.IsNullOrEmpty(code))
             {

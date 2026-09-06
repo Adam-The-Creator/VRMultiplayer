@@ -1,6 +1,7 @@
 using FishNet;
 using UnityEngine;
 using Assets.Database.DatabaseManagement;
+using System.Threading.Tasks;
 
 public class VRNetworkManager : MonoBehaviour
 {
@@ -8,6 +9,9 @@ public class VRNetworkManager : MonoBehaviour
 
     [Tooltip("The IP address to connect to. Use 'localhost' if running on the same machine.")]
     public string serverAddress = "localhost";
+    public bool IsMultiplayerActive =>
+        InstanceFinder.NetworkManager != null &&
+        (InstanceFinder.ServerManager.Started || InstanceFinder.ClientManager.Started);
 
     public void Awake()
     {
@@ -30,12 +34,14 @@ public class VRNetworkManager : MonoBehaviour
             return;
         }
 
-        // Ensure that the ServerManager and ClientManager are initialized
         if (InstanceFinder.ServerManager == null || InstanceFinder.ClientManager == null)
         {
             UnityEngine.Debug.LogError("FishNet ServerManager or ClientManager is not initialized. Please ensure FishNet is set up correctly.");
             return; // Halt further execution if FishNet is missing
         }
+
+        // Everyone starts as a local Host in their own sandbox immediately
+        StartHostSession();
     }
 
     public void StartHostSession()
@@ -44,18 +50,25 @@ public class VRNetworkManager : MonoBehaviour
         {
             InstanceFinder.ServerManager.StartConnection();
             InstanceFinder.ClientManager.StartConnection();
-            Debug.Log("[Network] Host session started.");
+            Debug.Log("[Network] Sandbox Host session started.");
         }
     }
 
-    public void JoinSession(string address = null)
+    // Called when the player joins a Room Code
+    public async void JoinRemoteSession(string address)
     {
-        if (InstanceFinder.ClientManager != null)
-        {
-            if (!string.IsNullOrEmpty(address)) serverAddress = address;
+        Debug.Log("[Network] Leaving local sandbox to join remote room...");
 
-            InstanceFinder.ClientManager.StartConnection(serverAddress);
-            Debug.Log($"[Network] Client connecting to {serverAddress}...");
-        }
+        // 1. Stop local sandbox
+        InstanceFinder.ServerManager.StopConnection(true);
+        InstanceFinder.ClientManager.StopConnection();
+
+        // Wait a brief moment for FishNet to clean up local network objects
+        await Task.Delay(500);
+
+        // 2. Connect to the remote Host
+        serverAddress = address;
+        InstanceFinder.ClientManager.StartConnection(serverAddress);
+        Debug.Log($"[Network] Connecting to remote host at: {serverAddress}");
     }
 }

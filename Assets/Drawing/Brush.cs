@@ -102,6 +102,16 @@ public class Brush : MonoBehaviour
 
     private void Paint()
     {
+        if (drawingObject == null)
+        {
+            VRDrawing target = FindObjectOfType<VRDrawing>();
+            if (target != null) drawingObject = target.gameObject;
+            else
+            {
+                Debug.LogWarning("Paint skipped: VRDrawing object not yet available in scene.");
+                return;
+            }
+        }
         if (currentLine == null)
         {
             /* Initialize the LineRenderer with the first position */
@@ -151,7 +161,7 @@ public class Brush : MonoBehaviour
                 newLine.points.Add(new Point(brushTip.position, initialTimestamp));
 
                 // Dispatch to network
-                vrDrawingData.CmdStartNewLine(newLine);
+                vrDrawingData.AddNewLine(newLine);
             }
             else
             {
@@ -177,7 +187,7 @@ public class Brush : MonoBehaviour
                     pointTimestamps.Add(pointTimestamp);
 
                     Point newPoint = new(brushTip.position, pointTimestamp);
-                    vrDrawingData.CmdAddPointToLine(currentLine.name, newPoint);
+                    vrDrawingData.AddNewPointToLine(currentLine.name, newPoint);
                 }
                 else
                 {
@@ -203,13 +213,13 @@ public class Brush : MonoBehaviour
                     {
                         // If fully destroying, we might want a new CmdDestroyLine, 
                         // but for now we will still flag it erased on the network so the DB knows.
-                        vrDrawingData.CmdEraseLine(hit.collider.gameObject.name, playerID, GetTimestamp(), parsedHand);
+                        vrDrawingData.EraseLine(hit.collider.gameObject.name, playerID, GetTimestamp(), parsedHand);
                         Destroy(hit.collider.gameObject);
                     }
                     else
                     {
                         // Notify the server about the erasure
-                        vrDrawingData.CmdEraseLine(hit.collider.gameObject.name, playerID, GetTimestamp(), parsedHand);
+                        vrDrawingData.EraseLine(hit.collider.gameObject.name, playerID, GetTimestamp(), parsedHand);
 
                         // Disable the renderer locally to make it instantly invisible
                         if (hit.collider.gameObject.TryGetComponent<Renderer>(out Renderer lineRenderer))

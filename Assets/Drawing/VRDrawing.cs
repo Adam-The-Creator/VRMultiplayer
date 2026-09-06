@@ -19,6 +19,19 @@ public class VRDrawing : NetworkBehaviour
 
     // --- LINE CREATION ---
 
+    public void AddNewLine(Line newLineData)
+    {
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        {
+            CmdStartNewLine(newLineData);
+        }
+        else
+        {
+            // Local fallback for single-player
+            drawing.lines.Add(newLineData);
+        }
+    }
+
     // 1. Client tells the Server they started a line
     [ServerRpc(RequireOwnership = false)]
     public void CmdStartNewLine(Line newLineData)
@@ -66,6 +79,26 @@ public class VRDrawing : NetworkBehaviour
 
     // --- POINT ADDITION ---
 
+    public void AddNewPointToLine(string lineId, Point newPoint)
+    {
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        {
+            CmdAddPointToLine(lineId, newPoint);
+        }
+        else
+        {
+            // Local fallback for single-player
+            for (int i = 0; i < drawing.lines.Count; i++)
+            {
+                if (drawing.lines[i].id == lineId)
+                {
+                    drawing.lines[i].points.Add(newPoint);
+                    break;
+                }
+            }
+        }
+    }
+
     [ServerRpc(RequireOwnership = false)]
     public void CmdAddPointToLine(string lineId, Point newPoint)
     {
@@ -98,6 +131,34 @@ public class VRDrawing : NetworkBehaviour
     }
 
     // --- ERASURE ---
+
+    public void EraseLine(string lineId, string playerID, string timestamp, Hand hand)
+    {
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        {
+            CmdEraseLine(lineId, playerID, timestamp, hand);
+        }
+        else
+        {
+            // Local fallback for single-player
+            for (int idx = 0; idx < drawing.lines.Count; ++idx)
+            {
+                if (drawing.lines[idx].id == lineId)
+                {
+                    drawing.lines[idx].status = Status.ERASED;
+                    drawing.lines[idx].history.Add(new LineEvent(LineEventType.ERASE, playerID, timestamp, hand));
+                    // Find the physical GameObject with this lineId and disable its renderer/collider
+                    Transform lineObj = transform.Find(lineId);
+                    if (lineObj != null)
+                    {
+                        if (lineObj.TryGetComponent<Renderer>(out var ren)) ren.enabled = false;
+                        if (lineObj.TryGetComponent<Collider>(out var col)) col.enabled = false;
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     [ServerRpc(RequireOwnership = false)]
     public void CmdEraseLine(string lineId, string playerID, string timestamp, Hand hand)
@@ -132,8 +193,16 @@ public class VRDrawing : NetworkBehaviour
     // Called by a UI Button click
     public void RequestSaveDrawing(string drawingName, string ownerId, GameType gameType, string sessionId)
     {
-        // Tell the authoritative server to initiate the save process
-        CmdSaveDrawingToDatabase(drawingName, ownerId, gameType, sessionId);
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        {
+            // Tell the authoritative server to initiate the save process
+            CmdSaveDrawingToDatabase(drawingName, ownerId, gameType, sessionId);
+        }
+        else
+        {
+            // Local fallback for single-player
+            _ = SaveDrawingTaskAsync(drawingName, ownerId, gameType, sessionId);
+        }
     }
 
     // 1. The RPC must be standard void, NOT async.

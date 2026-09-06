@@ -1,3 +1,4 @@
+using FishNet;
 using FishNet.Object;
 using UnityEngine;
 
@@ -8,24 +9,50 @@ public class SessionSpawner : NetworkBehaviour
 
     private GameObject spawnedDrawing;
 
-    public override void OnStartServer()
+    private void Start()
     {
-        base.OnStartServer();
+        // If a Drawing object is already active in the scene, abort to prevent duplicates
+        if (FindFirstObjectByType<VRDrawing>() != null) return;
 
-        if (drawingPrefab != null)
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
         {
-            spawnedDrawing = Instantiate(drawingPrefab, Vector3.zero, Quaternion.identity);
-            ServerManager.Spawn(spawnedDrawing);
-            Debug.Log("[Network] Authoritative Drawing object spawned strictly at Origin (0,0,0).");
+            // Online/MultiplayerPlayer mode
+            // Only the server/host should spawn networked objects
+            if (InstanceFinder.ServerManager != null && InstanceFinder.ServerManager.Started)
+            {
+                if (drawingPrefab != null)
+                {
+                    spawnedDrawing = Instantiate(drawingPrefab, Vector3.zero, Quaternion.identity);
+                    InstanceFinder.ServerManager.Spawn(spawnedDrawing);
+                    Debug.Log("[SessionSpawner] Spawned authoritative network Drawing object.");
+                }
+            }
+        }
+        else
+        {
+            // Offline/SinglePlayer mode
+            if (drawingPrefab != null)
+            {
+                spawnedDrawing = Instantiate(drawingPrefab, Vector3.zero, Quaternion.identity);
+                Debug.Log("[SessionSpawner] Spawned local SinglePlayer Drawing object.");
+            }
         }
     }
 
     private void OnDestroy()
     {
-        if (IsServerInitialized && spawnedDrawing != null)
+        if (spawnedDrawing != null)
         {
-            ServerManager.Despawn(spawnedDrawing, DespawnType.Destroy);
-            Debug.Log("[Network] Authoritative Drawing object destroyed.");
+            // Clean up network instance if server is initialized
+            if (InstanceFinder.ServerManager != null && InstanceFinder.ServerManager.Started)
+            {
+                InstanceFinder.ServerManager.Despawn(spawnedDrawing, DespawnType.Destroy);
+            }
+            else
+            {
+                // Local cleanup
+                Destroy(spawnedDrawing);
+            }
         }
     }
 }

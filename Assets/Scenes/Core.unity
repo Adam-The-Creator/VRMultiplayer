@@ -122,6 +122,66 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &3360273 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8147709122470949095, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
+  m_PrefabInstance: {fileID: 8772167620750286953}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3360276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3360273}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 275d77b16120f8a41a07acb3a2c89080, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!1 &214218532 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7443408887813606051, guid: 0b650fca685f2eb41a86538aa883e4c1, type: 3}
+  m_PrefabInstance: {fileID: 1642867941}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &214218533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214218532}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28b19962fe839804180bd02ce1a545f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serverBindAddress: 
+  _port: 7770
+  _maximumClients: 9001
+  _peerToPeer: 1
+  _clientAddress: 
+--- !u!114 &214218534
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214218532}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34e4a322dca349547989b14021da4e23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Transport: {fileID: 214218533}
+  _maximumClientPacketSize: 20480
+  _intermediateLayer: {fileID: 0}
+  _latencySimulator:
+    _enabled: 0
+    _simulateHost: 1
+    _latency: 0
+    _outOfOrder: 0
+    _packetLoss: 0
 --- !u!1001 &887219300
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1507,8 +1567,19 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7443408887813606051, guid: 0b650fca685f2eb41a86538aa883e4c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 214218534}
+    - targetCorrespondingSourceObject: {fileID: 7443408887813606051, guid: 0b650fca685f2eb41a86538aa883e4c1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 214218533}
   m_SourcePrefab: {fileID: 100100000, guid: 0b650fca685f2eb41a86538aa883e4c1, type: 3}
+--- !u!4 &2078759398 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4613719595709843252, guid: 9a87757ddd6761b48bcbd12e4679e81d, type: 3}
+  m_PrefabInstance: {fileID: 887219300}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2085618312
 GameObject:
   m_ObjectHideFlags: 0
@@ -1520,6 +1591,7 @@ GameObject:
   - component: {fileID: 2085618314}
   - component: {fileID: 2085618313}
   - component: {fileID: 2085618315}
+  - component: {fileID: 2085618316}
   m_Layer: 0
   m_Name: VRNetworkManager
   m_TagString: Untagged
@@ -1567,6 +1639,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58a02b3f99580eb4eb7776661287afae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &2085618316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2085618312}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b1af26c414f0e548b27b76f3a6a675a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &8772167620750286953
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1575,6 +1659,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3697388316562212325, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
+      propertyPath: m_StartingHoverFilters.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3759209399289917459, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
+      propertyPath: m_PlayerRoot
+      value: 
+      objectReference: {fileID: 2078759398}
+    - target: {fileID: 3759209399289917459, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
+      propertyPath: m_KeyboardPrefab
+      value: 
+      objectReference: {fileID: 7339749990365776448, guid: 1aaf2dceef22d1147bfc70d706ddd188, type: 3}
     - target: {fileID: 6109780969602956787, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1622,7 +1718,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8147709122470949095, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3360276}
   m_SourcePrefab: {fileID: 100100000, guid: 3e7cbd9bce121cc44b6cd5ca05dba586, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

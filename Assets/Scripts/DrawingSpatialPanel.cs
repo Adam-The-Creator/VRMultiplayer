@@ -18,12 +18,6 @@ public class DrawingSpatialPanel : MonoBehaviour
 
     void Start()
     {
-        if (drawingNameInput != null && drawingNameInput.GetComponent<VRKeyboardInputField>() == null)
-        {
-            drawingNameInput.gameObject.AddComponent<VRKeyboardInputField>();
-            Debug.Log("DrawingSpatialPanel: Added VRKeyboardInputField to drawingNameInput");
-        }
-
         if (saveDrawingButton != null)
         {
             saveDrawingButton.onClick.AddListener(() =>
