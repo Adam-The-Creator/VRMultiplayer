@@ -2659,7 +2659,7 @@ GameObject:
   m_Component:
   - component: {fileID: 307143580}
   m_Layer: 0
-  m_Name: enviroment
+  m_Name: Enviroment
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6155,7 +6155,7 @@ GameObject:
   - component: {fileID: 753105999}
   - component: {fileID: 753105998}
   m_Layer: 0
-  m_Name: ' ModelPlacer'
+  m_Name: ModelPlacer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -15630,7 +15630,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1975003588
 MonoBehaviour:
   m_ObjectHideFlags: 0

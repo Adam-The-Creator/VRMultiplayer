@@ -5319,7 +5319,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &980769873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7079,7 +7079,7 @@ GameObject:
   - component: {fileID: 1218824035}
   - component: {fileID: 1218824034}
   m_Layer: 0
-  m_Name: ' ModelPlacer'
+  m_Name: ModelPlacer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9916,123 +9916,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1863361204}
   m_CullTransparentMesh: 1
---- !u!1 &1881664724
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1881664729}
-  - component: {fileID: 1881664728}
-  - component: {fileID: 1881664727}
-  m_Layer: 5
-  m_Name: VrKeyboard
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1881664727
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1881664724}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2c7091a0aa2a0c44f8da5f446be00915, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  generateOnStart: 1
-  buttonSize: 80
-  buttonSpacing: 35
-  rowSpacing: 35
-  buttonColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
-  buttonTextColor: {r: 1, g: 1, b: 1, a: 1}
-  keyboardWidth: 1300
-  keyboardHeight: 800
-  buttonFont: {fileID: 12800000, guid: 78c7f42a7547f22448a621eaeeef3fd2, type: 3}
---- !u!114 &1881664728
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1881664724}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4b750862babfad479a6eb7f8c17ada4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  keyboardPanel: {fileID: 0}
-  currentInputField: {fileID: 0}
-  displayText: {fileID: 0}
-  letterButtons:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  spaceButton: {fileID: 0}
-  backspaceButton: {fileID: 0}
-  enterButton: {fileID: 0}
-  shiftButton: {fileID: 0}
-  closeButton: {fileID: 0}
-  clearButton: {fileID: 0}
-  numberButtons:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  lettersLayout: {fileID: 0}
-  numbersLayout: {fileID: 0}
-  switchToNumbersButton: {fileID: 0}
-  switchToLettersButton: {fileID: 0}
---- !u!4 &1881664729
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1881664724}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1908530471
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12663,7 +12546,6 @@ SceneRoots:
   - {fileID: 980769874}
   - {fileID: 2146687266219420856}
   - {fileID: 2132540601}
-  - {fileID: 1881664729}
   - {fileID: 179872713486806833}
   - {fileID: 1106542026}
   - {fileID: 1550245985}
