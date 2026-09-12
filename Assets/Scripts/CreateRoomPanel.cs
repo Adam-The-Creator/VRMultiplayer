@@ -44,7 +44,7 @@ public class CreateRoomPanel : MonoBehaviour
                 roomCodeText.text = code;
                 feedbackText.text = "Room is live and ready to share!";
 
-                VRNetworkManager.Instance.StartHostSession();
+                //VRNetworkManager.Instance.StartHostSession();
             }
             else
             {
