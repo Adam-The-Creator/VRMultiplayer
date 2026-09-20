@@ -20,11 +20,13 @@ public class Avatar : NetworkBehaviour
         // Optional: Hide the head model locally so it doesn't block the player's view
         if (base.IsOwner)
         {
-            if (headTarget != null)
+            // Grab all renderers (both MeshRenderer and SkinnedMeshRenderer) across the entire avatar
+            Renderer[] allRenderers = GetComponentsInChildren<Renderer>();
+
+            foreach (var ren in allRenderers)
             {
-                // Disable the mesh renderers of the head for the local player only
-                MeshRenderer[] headMeshes = headTarget.GetComponentsInChildren<MeshRenderer>();
-                foreach (var mesh in headMeshes) mesh.enabled = false;
+                // Set the mesh to render only its shadow, making it invisible to the local camera
+                ren.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
             }
         }
     }
