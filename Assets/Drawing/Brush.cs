@@ -55,7 +55,7 @@ public class Brush : MonoBehaviour
 
     private void Update()
     {
-        if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) return;
+        if (ConfigurationManager.Current.Drawing.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) return;
 
         isPainting = (float)paintingInputAction.action.ReadValue<float>() > 0.5f;
 
@@ -166,7 +166,7 @@ public class Brush : MonoBehaviour
             else
             {
                 //Suppress annoying error messages in scenes where drawing is blocked
-                if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
+                if (ConfigurationManager.Current.Drawing.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
                 else Debug.LogError("The drawingObject does not have a VRDrawing component attached.");
             }
         }
@@ -191,7 +191,7 @@ public class Brush : MonoBehaviour
                 }
                 else
                 {
-                    if (ConfigurationManager.CurrentDrawingConfig.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
+                    if (ConfigurationManager.Current.Drawing.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) Debug.LogWarning("Drawing is blocked in this scene.");
                     else Debug.LogError("The drawingObject does not have a VRDrawing component attached.");
                 }
             }
@@ -209,7 +209,7 @@ public class Brush : MonoBehaviour
                     Enum.TryParse(handType.ToString(), out Hand parsedHand);
                     string playerID = AuthManager.GetCurrentUserID();
 
-                    if (ConfigurationManager.CurrentDrawingConfig.DestroyLineOnErase)
+                    if (ConfigurationManager.Current.Drawing.DestroyLineOnErase)
                     {
                         // If fully destroying, we might want a new CmdDestroyLine, 
                         // but for now we will still flag it erased on the network so the DB knows.

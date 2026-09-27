@@ -144,10 +144,8 @@ namespace Assets.Database.DatabaseManagement
         public async Task StartDBServerIfNeeded()
         {
             // Apply config URL if available
-            if (ConfigurationManager.CurrentConfig != null && !string.IsNullOrEmpty(ConfigurationManager.CurrentConfig.RemoteServerURL))
-            {
-                apiUrl = ConfigurationManager.CurrentConfig.RemoteServerURL;
-            }
+            var profile = ConfigurationManager.ActiveServerProfile;
+            if (profile != null && !string.IsNullOrEmpty(profile.ServerURL)) apiUrl = profile.GetNormalizedUrl();
 
             CurrentStatus = ServerStatus.Starting;
             UnityEngine.Debug.Log("[DB] Checking if Database Server is online...");
@@ -163,10 +161,10 @@ namespace Assets.Database.DatabaseManagement
             }
 
             // 2. If it's not online, and we are in Local mode, start it
-            if (ConfigurationManager.CurrentConfig != null && ConfigurationManager.CurrentConfig.DatabaseMode == "Local")
+            if (profile != null && profile.Mode == DatabaseMode.Local)
             {
                 UnityEngine.Debug.Log("[DB] Server not found. Attempting to start local Python process...");
-                StartLocalProcess();
+                StartLocalProcess(profile);
 
                 // Wait a few seconds for the Python app to fully boot up
                 await Task.Delay(3000);
@@ -202,7 +200,7 @@ namespace Assets.Database.DatabaseManagement
             return request.result == UnityWebRequest.Result.Success;
         }
 
-        private void StartLocalProcess()
+        private void StartLocalProcess(ServerProfile profile)
         {
             try
             {
@@ -210,7 +208,7 @@ namespace Assets.Database.DatabaseManagement
                 ProcessStartInfo startInfo = new()
                 {
                     FileName = "python",
-                    Arguments = ConfigurationManager.CurrentConfig.LocalPythonScriptPath,
+                    Arguments = profile.LocalPythonScriptPath,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

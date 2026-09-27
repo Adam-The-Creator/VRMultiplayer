@@ -1,0 +1,35 @@
+{
+  "SchemaVersion": 1,
+  "Network": {
+    "ActiveProfile": "Local",
+    "Profiles": [
+      {
+        "Name": "Local",
+        "ServerURL": "http://127.0.0.1:8000",
+        "Mode": "Local",
+        "LocalPythonScriptPath": "../DatabaseServer/server.py",
+        "TimeoutSeconds": 5,
+        "ExtraHeaders": {}
+      },
+      {
+        "Name": "Ngrok",
+        "ServerURL": "https://your-tunnel-id.ngrok-free.app",
+        "Mode": "Remote",
+        "LocalPythonScriptPath": "../DatabaseServer/server.py",
+        "TimeoutSeconds": 8,
+        "ExtraHeaders": {
+          "ngrok-skip-browser-warning": "true"
+        }
+      }
+    ]
+  },
+  "Audio": {
+    "MasterVolume": 1.0,
+    "MusicVolume": 0.5,
+    "Muted": false
+  },
+  "Drawing": {
+    "DestroyLineOnErase": false,
+    "DrawingBlockedScenes": ["Login"]
+  }
+}
