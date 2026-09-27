@@ -12,6 +12,8 @@ public class JoinRoomPanel : MonoBehaviour
 
     private void Start()
     {
+        if (feedbackText != null) feedbackText.text = "";
+
         joinButton.onClick.AddListener(async () =>
         {
             string code = roomCodeInput.text.Trim().ToUpper();

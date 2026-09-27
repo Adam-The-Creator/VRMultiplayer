@@ -20765,6 +20765,7 @@ MonoBehaviour:
   drawingsPanel: {fileID: 912611333}
   playerInfoPanel: {fileID: 1773009059}
   gamePanel: {fileID: 1400859714}
+  joinRoomPanel: {fileID: 1823628980}
   gameTypeDropdown: {fileID: 857324313}
   exitButton: {fileID: 1071346058}
   newDrawingButton: {fileID: 1530238881}
@@ -21559,6 +21560,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &1823628980 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5043001615270044431, guid: 5e3095e5747cffc4a9941be262278eec, type: 3}
+  m_PrefabInstance: {fileID: 8637563111738009441}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1838820490
 GameObject:
   m_ObjectHideFlags: 0

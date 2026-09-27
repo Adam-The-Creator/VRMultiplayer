@@ -268,8 +268,10 @@ namespace Assets.Database.DatabaseManagement
 
 
         // Miscellaneous methods
+        [Obsolete("Use the API to update the database instead.")]
         public static string DatabasePath() { return _databasePath; }
 
+        [Obsolete("Use the API to update the database instead.")]
         public void Initialize()
         {
             // TODO: Update this method to call the API to update the database changes
@@ -639,7 +641,109 @@ namespace Assets.Database.DatabaseManagement
         public async Task<RoomJoinResponse> JoinRoom(string roomCode)
         {
             string response = await SendRequest($"/rooms/{roomCode}", "GET");
+
+            // If the response contains an error "detail" (like a 404), return null so the UI knows it failed.
+            if (response != null && response.Contains("\"detail\"")) return null;
             return response != null ? JsonConvert.DeserializeObject<RoomJoinResponse>(response) : null;
+        }
+
+        public async Task<bool> DeleteRoom(string roomCode)
+        {
+            if (string.IsNullOrEmpty(roomCode)) return false;
+
+            string response = await SendRequest($"/rooms/{roomCode}", "DELETE");
+
+            // Check for success and ensure it isn't returning a 404 error
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                UnityEngine.Debug.Log($"Room {roomCode} deleted successfully via API.");
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<string> GetRoomIdByCode(string roomCode)
+        {
+            if (string.IsNullOrEmpty(roomCode)) return null;
+
+            string response = await SendRequest($"/rooms/code/{roomCode}/id", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<string> GetRoomName(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/name", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<string> GetRoomAddress(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/address", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<string> GetRoomSessionId(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/session", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<string> GetRoomDrawingId(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/drawing", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<string> GetRoomHostId(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/host", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return JsonConvert.DeserializeObject<string>(response);
+            }
+            return null;
+        }
+
+        public async Task<GameType?> GetRoomGameType(string roomId)
+        {
+            if (string.IsNullOrEmpty(roomId)) return null;
+
+            string response = await SendRequest($"/rooms/{roomId}/gametype", "GET");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                return (GameType)JsonConvert.DeserializeObject<int>(response);
+            }
+            return null;
         }
 
     }

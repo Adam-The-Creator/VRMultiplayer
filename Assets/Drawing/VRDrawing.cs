@@ -188,7 +188,7 @@ public class VRDrawing : NetworkBehaviour
         }
     }
 
-    // --- DATABASE SAVE ---
+    // --- DATABASE SAVE (NEW RECORD) ---
 
     // Called by a UI Button click
     public void RequestSaveDrawing(string drawingName, string ownerId, GameType gameType, string sessionId)
@@ -232,15 +232,44 @@ public class VRDrawing : NetworkBehaviour
 
         bool success = await DatabaseManager.Instance.SaveDrawing(payload);
 
-        if (success)
+        if (success) Debug.Log($"[DB] Drawing '{drawingName}' successfully committed to MongoDB and SQLite.");
+        else Debug.LogError($"[DB] Failed to save drawing '{drawingName}'.");
+    }
+
+    // --- DATABASE UPDATE (EXISTING RECORD) ---
+
+    public void RequestUpdateDrawing(string drawingId, string drawingName)
+    {
+        if (VRNetworkManager.Instance.IsMultiplayerActive)
         {
-            Debug.Log($"[DB] Drawing '{drawingName}' successfully committed to MongoDB and SQLite.");
-            // Optional: You could send an ObserversRpc back to clients here 
-            // to update their UI text to "Save Successful!"
+            CmdUpdateDrawingInDatabase(drawingId, drawingName);
         }
         else
         {
-            Debug.LogError($"[DB] Failed to save drawing '{drawingName}'.");
+            _ = UpdateDrawingTaskAsync(drawingId, drawingName);
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void CmdUpdateDrawingInDatabase(string drawingId, string drawingName)
+    {
+        _ = UpdateDrawingTaskAsync(drawingId, drawingName);
+    }
+
+    private async Task UpdateDrawingTaskAsync(string drawingId, string drawingName)
+    {
+        DatabaseManager.DrawingUpdateMessage payload = new()
+        {
+            name = drawingName,
+            lines = this.drawing.lines,
+            trackedBehaviors = this.drawing.trackedBehaviors,
+            placedModels = this.drawing.placedModels,
+            collaborators = new List<Collaborator>() // TODO: Get the collaborators
+        };
+
+        var updatedData = await DatabaseManager.Instance.UpdateDrawing(drawingId, payload);
+
+        if (updatedData != null) Debug.Log($"[DB] Drawing '{drawingName}' successfully updated in MongoDB and SQLite.");
+        else Debug.LogError($"[DB] Failed to update drawing '{drawingName}'.");
     }
 }

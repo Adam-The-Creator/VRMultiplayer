@@ -11,8 +11,12 @@ public class CreateRoomPanel : MonoBehaviour
     [SerializeField] private TMP_Text feedbackText;
     [SerializeField] private Button createRoomButton;
 
+    private string _activeRoomCode = null;
+
     private void Start()
     {
+        if (feedbackText != null) feedbackText.text = "";
+
         createRoomButton.onClick.AddListener(async () =>
         {
             createRoomButton.interactable = false;
@@ -41,6 +45,7 @@ public class CreateRoomPanel : MonoBehaviour
 
             if (!string.IsNullOrEmpty(code))
             {
+                _activeRoomCode = code; // Store the code so we can delete the room later
                 roomCodeText.text = code;
                 feedbackText.text = "Room is live and ready to share!";
 
@@ -52,5 +57,25 @@ public class CreateRoomPanel : MonoBehaviour
                 createRoomButton.interactable = true;
             }
         });
+    }
+
+    // Automatically clean up the room from the database if the host leaves this view
+    private async void OnDestroy()
+    {
+        if (!string.IsNullOrEmpty(_activeRoomCode) && DatabaseManager.Instance != null)
+        {
+            await DatabaseManager.Instance.DeleteRoom(_activeRoomCode);
+            _activeRoomCode = null;
+        }
+    }
+
+    // Backup cleanup in case the host quits the game entirely while the room is open
+    private async void OnApplicationQuit()
+    {
+        if (!string.IsNullOrEmpty(_activeRoomCode) && DatabaseManager.Instance != null)
+        {
+            await DatabaseManager.Instance.DeleteRoom(_activeRoomCode);
+            _activeRoomCode = null;
+        }
     }
 }

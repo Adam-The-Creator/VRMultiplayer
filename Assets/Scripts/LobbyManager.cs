@@ -14,6 +14,7 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private GameObject drawingsPanel;
     [SerializeField] private GameObject playerInfoPanel;
     [SerializeField] private GameObject gamePanel;
+    [SerializeField] private GameObject joinRoomPanel;
 
     [Header("Game Type Selection")]
     [SerializeField] private TMP_Dropdown gameTypeDropdown;
@@ -57,6 +58,7 @@ public class LobbyManager : MonoBehaviour
 
             var userRole = await AuthManager.GetCurrentUserRoleAsync();
             analysisManager.SetPanelsActive(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
+            joinRoomPanel.SetActive(AuthManager.IsLoggedIn());
 
             // Wait for drawings to populate
             await SwitchToDrawingsPanelAsync();
@@ -73,6 +75,7 @@ public class LobbyManager : MonoBehaviour
             if (newDrawingButton != null) newDrawingButton.interactable = false;
             if (drawingListContent != null) foreach (Transform child in drawingListContent) Destroy(child.gameObject);
             analysisManager.SetPanelsActive(false);
+            joinRoomPanel.SetActive(false);
         };
 
 
@@ -127,6 +130,7 @@ public class LobbyManager : MonoBehaviour
             if (gameTypeDropdown != null) gameTypeDropdown.interactable = false;
             if (newDrawingButton != null) newDrawingButton.interactable = false;
             analysisManager.SetPanelsActive(false);
+            joinRoomPanel.SetActive(false);
         }
         else
         {
@@ -137,6 +141,7 @@ public class LobbyManager : MonoBehaviour
             if (gameTypeDropdown != null) gameTypeDropdown.interactable = true;
             if (newDrawingButton != null) newDrawingButton.interactable = true;
             analysisManager.SetPanelsActive(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
+            joinRoomPanel.SetActive(true);
         }
     }
 
