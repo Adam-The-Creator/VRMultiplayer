@@ -41,6 +41,23 @@ public class LobbyManager : MonoBehaviour
     private string loggedInUserId = null;
     private const string PlayerPrefSelectedGameType = "SelectedGameType";
 
+    private void Awake()
+    {
+        // 1. Find all XR Interaction Managers currently in existence
+        var xrManagers = FindObjectsOfType<UnityEngine.XR.Interaction.Toolkit.XRInteractionManager>();
+
+        // 2. The auto-generated ghost manager is spawned at the root of the scene (it has no parent).
+        // Our real manager is safely parented under XRCore.
+        foreach (var manager in xrManagers)
+        {
+            if (manager.transform.parent == null && manager.name == "XRInteractionManager")
+            {
+                Debug.Log("LobbyManager: Found and destroyed the auto-generated ghost XRInteractionManager.");
+                Destroy(manager.gameObject);
+            }
+        }
+    }
+
     void Start()
     {
         AuthManager authManager = GameObject.FindGameObjectWithTag("AuthManager").GetComponent<AuthManager>();
