@@ -97,7 +97,7 @@ public class ConfigurationManager : MonoBehaviour
 
         // Guard against ActiveProfile pointing at a profile that no longer exists
         // (e.g. someone hand-edited the file and typo'd or removed it).
-        if (_current.Network.GetActiveProfile() == null && _current.Network.Profiles.Count > 0)
+        if (_current.Network.GetProfile(_current.Network.ActiveProfile) == null && _current.Network.Profiles.Count > 0)
         {
             Debug.LogWarning($"[ConfigurationManager] ActiveProfile '{_current.Network.ActiveProfile}' not found, " +
                               $"falling back to '{_current.Network.Profiles[0].Name}'.");

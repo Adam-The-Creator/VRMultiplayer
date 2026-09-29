@@ -147,6 +147,8 @@ namespace Assets.Database.DatabaseManagement
             var profile = ConfigurationManager.ActiveServerProfile;
             if (profile != null && !string.IsNullOrEmpty(profile.ServerURL)) apiUrl = profile.GetNormalizedUrl();
 
+            UnityEngine.Debug.Log($"[DB] Active profile '{profile?.Name}' -> {apiUrl} ({profile?.Mode})");
+
             CurrentStatus = ServerStatus.Starting;
             UnityEngine.Debug.Log("[DB] Checking if Database Server is online...");
 
@@ -188,10 +190,18 @@ namespace Assets.Database.DatabaseManagement
             }
         }
 
+        private static void ApplyProfile(UnityWebRequest request)
+        {
+            var p = ConfigurationManager.ActiveServerProfile;
+            request.timeout = Mathf.Max(1, p != null ? p.TimeoutSeconds : 5);
+            if (p?.ExtraHeaders == null) return;
+            foreach (var kv in p.ExtraHeaders) request.SetRequestHeader(kv.Key, kv.Value);
+        }
+
         private async Task<bool> PingServer()
         {
             using UnityWebRequest request = new(apiUrl + "/", "GET");
-            request.timeout = 3;
+            ApplyProfile(request);
             request.downloadHandler = new DownloadHandlerBuffer();
 
             var operation = request.SendWebRequest();
@@ -249,6 +259,7 @@ namespace Assets.Database.DatabaseManagement
             }
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
+            ApplyProfile(request);
 
             var operation = request.SendWebRequest();
             while (!operation.isDone) await Task.Yield();
@@ -257,7 +268,12 @@ namespace Assets.Database.DatabaseManagement
             {
                 if (request.responseCode == 404)
                 {
-                    return request.downloadHandler.text;
+                    string body = request.downloadHandler.text?.TrimStart();
+                    if (!string.IsNullOrEmpty(body) && (body.StartsWith("{") || body.StartsWith("[")))
+                        return request.downloadHandler.text;   // a real "not found" answer from the API
+                        UnityEngine.Debug.LogError($"API Error ({method} {endpoint}): 404 not from the API " +
+                        $"(tunnel offline?) ngrok code='{request.GetResponseHeader("Ngrok-Error-Code")}'");
+                    return null;
                 }
                 UnityEngine.Debug.LogError($"API Error ({method} {endpoint}): {request.error}\nResponse: {request.downloadHandler.text}");
                 return null;
