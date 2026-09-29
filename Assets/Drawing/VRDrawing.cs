@@ -17,11 +17,21 @@ public class VRDrawing : NetworkBehaviour
         drawing ??= new Drawing();
     }
 
+    private void Start()
+    {
+        Debug.Log($"[VRDrawing] '{name}' scene={gameObject.scene.name} sceneObject={NetworkObject.IsSceneObject} spawned={IsSpawned}");
+    }
+    public override void OnStartServer() => Debug.Log($"[VRDrawing] '{name}' OnStartServer");
+    public override void OnStartClient() => Debug.Log($"[VRDrawing] '{name}' OnStartClient");
+
+    // True only when THIS object is live on the network
+    private bool NetActive => IsSpawned && IsClientInitialized;
+
     // --- LINE CREATION ---
 
     public void AddNewLine(Line newLineData)
     {
-        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        if (NetActive)
         {
             CmdStartNewLine(newLineData);
         }
@@ -81,7 +91,7 @@ public class VRDrawing : NetworkBehaviour
 
     public void AddNewPointToLine(string lineId, Point newPoint)
     {
-        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        if (NetActive)
         {
             CmdAddPointToLine(lineId, newPoint);
         }
@@ -134,7 +144,7 @@ public class VRDrawing : NetworkBehaviour
 
     public void EraseLine(string lineId, string playerID, string timestamp, Hand hand)
     {
-        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        if (NetActive)
         {
             CmdEraseLine(lineId, playerID, timestamp, hand);
         }
@@ -193,7 +203,7 @@ public class VRDrawing : NetworkBehaviour
     // Called by a UI Button click
     public void RequestSaveDrawing(string drawingName, string ownerId, GameType gameType, string sessionId)
     {
-        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        if (NetActive)
         {
             // Tell the authoritative server to initiate the save process
             CmdSaveDrawingToDatabase(drawingName, ownerId, gameType, sessionId);
@@ -240,7 +250,7 @@ public class VRDrawing : NetworkBehaviour
 
     public void RequestUpdateDrawing(string drawingId, string drawingName)
     {
-        if (VRNetworkManager.Instance.IsMultiplayerActive)
+        if (NetActive)
         {
             CmdUpdateDrawingInDatabase(drawingId, drawingName);
         }
