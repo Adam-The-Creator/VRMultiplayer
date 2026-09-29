@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 using Assets.Database.DatabaseManagement;
+using System.Threading.Tasks;
 
 public class JoinRoomPanel : MonoBehaviour
 {
@@ -26,7 +27,7 @@ public class JoinRoomPanel : MonoBehaviour
 
             if (roomData != null)
             {
-                feedbackText.text = "Joining...";
+                feedbackText.text = "Connecting to Host...";
 
                 // Inject the joined room's context into PlayerPrefs
                 PlayerPrefs.SetString("CurrentSessionID", roomData.sessionID);
@@ -34,14 +35,32 @@ public class JoinRoomPanel : MonoBehaviour
                 PlayerPrefs.SetInt("LoadMode", 1);
                 PlayerPrefs.Save();
 
-                // Switch network states from Local Host to Remote Client
-                VRNetworkManager.Instance.JoinRemoteSession(roomData.roomAddress);
-
-                // Get the correct environment based on the room's GameType
                 string sceneToLoad = LobbyManager.GetSceneNameForGameType(roomData.gameType);
 
-                SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
-                SceneManager.UnloadSceneAsync(gameObject.scene.name); // Cleanly unload Lobby
+                // 1. Tell FishNet to connect. FishNet's SceneManager will automatically 
+                //    download and load the host's active scene (e.g., DrawingScene) for us.
+                VRNetworkManager.Instance.JoinRemoteSession(roomData.roomAddress);
+
+                // 2. Wait for FishNet to finish loading the networked scene
+                feedbackText.text = "Syncing Environment...";
+                float timeout = 10f;
+                float timer = 0f;
+
+                while (!SceneManager.GetSceneByName(sceneToLoad).isLoaded)
+                {
+                    timer += Time.deltaTime;
+                    if (timer > timeout)
+                    {
+                        feedbackText.text = "Connection timed out. Host may be offline.";
+                        joinButton.interactable = true;
+                        return;
+                    }
+                    await Task.Yield();
+                }
+
+                // 3. Set the newly networked scene as active and destroy the Login scene
+                SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneToLoad));
+                SceneManager.UnloadSceneAsync(gameObject.scene.name);
             }
             else
             {
