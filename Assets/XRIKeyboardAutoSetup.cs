@@ -57,13 +57,13 @@ public class XRIKeyboardAutoSetup : MonoBehaviour
         if (canvas != null)
         {
             // Remove the standard GraphicRaycaster to prevent XR conflicts
-            if (canvas.TryGetComponent<UnityEngine.UI.GraphicRaycaster>(out var oldRaycaster) && !(oldRaycaster is TrackedDeviceGraphicRaycaster))
+            if (canvas.TryGetComponent<UnityEngine.UI.GraphicRaycaster>(out var oldRaycaster))
             {
                 Destroy(oldRaycaster);
             }
 
             // Ensure the XR-specific raycaster is present
-            if (canvas.GetComponent<TrackedDeviceGraphicRaycaster>() == null)
+            if (!canvas.TryGetComponent<TrackedDeviceGraphicRaycaster>(out _))
             {
                 canvas.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
             }

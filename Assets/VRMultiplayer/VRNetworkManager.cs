@@ -44,14 +44,27 @@ public class VRNetworkManager : MonoBehaviour
         StartHostSession();
     }
 
-    public void StartHostSession()
+    public bool StartHostSession()
     {
-        if (InstanceFinder.ServerManager != null && InstanceFinder.ClientManager != null)
+        if (!SteamManager.Initialized)
         {
-            InstanceFinder.ServerManager.StartConnection();
-            InstanceFinder.ClientManager.StartConnection();
-            Debug.Log("[Network] Sandbox Host session started.");
+            Debug.LogWarning("[Network] Steam unavailable - staying offline (single-player sandbox).");
+            return false;
         }
+        var nm = InstanceFinder.NetworkManager;
+        if (nm == null) return false;
+
+        bool server = nm.ServerManager.StartConnection();
+        bool client = nm.ClientManager.StartConnection();
+        if (!server || !client)
+        {
+            Debug.LogError("[Network] Host start failed - rolling back.");
+            nm.ServerManager.StopConnection(true);
+            nm.ClientManager.StopConnection();
+            return false;
+        }
+        Debug.Log("[Network] Sandbox Host session started.");
+        return true;
     }
 
     // Called when the player joins a Room Code

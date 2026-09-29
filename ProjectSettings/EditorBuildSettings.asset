@@ -5,9 +5,27 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 55daccc09a3b69647bbab145b54a3ab3
+  - enabled: 1
+    path: Assets/Scenes/Core.unity
+    guid: a7744d8fd85aaac428afc9b8b4d651c3
+  - enabled: 1
+    path: Assets/Scenes/Login.unity
+    guid: 7e427eb2e4334334ba5f236b342b7e3c
+  - enabled: 1
+    path: Assets/Scenes/DrawingScene.unity
+    guid: 73cae29bc9a9c404591f409b06081e2a
+  - enabled: 1
+    path: Assets/Scenes/BeachScene.unity
+    guid: 03be7c025284bee4c9c5efacefd3516f
+  - enabled: 1
+    path: Assets/Scenes/RoomScene.unity
+    guid: 498c5eba00eb51d4c9e495e864acd7b2
+  - enabled: 1
+    path: Assets/Scenes/WordForestScene.unity
+    guid: dcbafd87ff593f245b3f806084634948
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: bfa1182bd221b4ca89619141f66f1260, type: 2}
     Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: dc5a169419fa04987b057f65238cf3ba, type: 2}

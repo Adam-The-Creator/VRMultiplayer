@@ -41,8 +41,9 @@ public class ConfigurationManager : MonoBehaviour
     {
         Formatting = Formatting.Indented,
         NullValueHandling = NullValueHandling.Ignore,
-        MissingMemberHandling = MissingMemberHandling.Ignore,  // unknown fields in the file are ignored, not fatal
-        Converters = { new StringEnumConverter() },            // writes "Mode": "Local" instead of "Mode": 0
+        MissingMemberHandling = MissingMemberHandling.Ignore,       // unknown fields in the file are ignored, not fatal
+        ObjectCreationHandling = ObjectCreationHandling.Replace,    // deserializing onto a fresh Preferences instead of trying to merge into the existing one
+        Converters = { new StringEnumConverter() },                 // writes "Mode": "Local" instead of "Mode": 0
         Error = (sender, args) =>
         {
             // A single bad field (wrong type, typo'd enum, etc) is skipped instead of aborting
