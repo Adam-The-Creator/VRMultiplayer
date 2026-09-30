@@ -1550,18 +1550,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2748792041904475408, guid: 36b914aa98b61674cbdff9cf1eade381, type: 3}
-      propertyPath: SceneId
-      value: 1941426157
-      objectReference: {fileID: 0}
-    - target: {fileID: 2748792041904475408, guid: 36b914aa98b61674cbdff9cf1eade381, type: 3}
-      propertyPath: _isGlobal
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2748792041904475408, guid: 36b914aa98b61674cbdff9cf1eade381, type: 3}
-      propertyPath: WasActiveDuringEdit
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 2818748312675305896, guid: 36b914aa98b61674cbdff9cf1eade381, type: 3}
       propertyPath: m_Name
       value: Drawing
@@ -1710,6 +1698,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tierTimeoutSeconds: 5
   joinTimeoutSeconds: 20
+  drawingSyncPrefab: {fileID: 8042468201131166458, guid: aec528d930f2f94459c541af9f6a80c8, type: 3}
   serverAddress: localhost
 --- !u!4 &2085618314
 Transform:

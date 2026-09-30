@@ -65,6 +65,10 @@ public static class NetworkSceneFlow
                 await Task.Yield();
             }
 
+            // The server spawns the network relay for the drawing into the scene everybody just loaded.
+            if (nm != null && nm.IsServerStarted && VRNetworkManager.Instance != null)
+                VRNetworkManager.Instance.SpawnDrawingSync(UnitySceneManager.GetSceneByName(sceneName));
+
             UnloadIfLoaded(sceneToUnload);
         }
         catch (Exception e) { Debug.LogException(e); }
@@ -99,6 +103,7 @@ public static class NetworkSceneFlow
             if (nm != null && nm.IsServerStarted && nm.SceneManager != null)
             {
                 // Host: global unload - connected clients unload it as well.
+                if (VRNetworkManager.Instance != null) VRNetworkManager.Instance.DespawnDrawingSync();
                 nm.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
 
                 // Fallback if FishNet did not manage this scene (e.g. it was loaded without a server).

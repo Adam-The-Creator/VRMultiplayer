@@ -6,6 +6,8 @@ using FishNet.Managing;
 using FishNet.Transporting;
 using Steamworks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 using MultipassTransport = FishNet.Transporting.Multipass.Multipass;
 using SteamTransport = FishySteamworks.FishySteamworks;
 using TugboatTransport = FishNet.Transporting.Tugboat.Tugboat;
@@ -22,6 +24,10 @@ public class VRNetworkManager : MonoBehaviour
 
     [Tooltip("Seconds to wait for the Steam connection to a remote host before giving up.")]
     [SerializeField] private float joinTimeoutSeconds = 20f;
+
+    [Header("Drawing sync")]
+    [Tooltip("Prefab with NetworkObject + DrawingSync. The server spawns it into the game scene.")]
+    [SerializeField] private GameObject drawingSyncPrefab;
 
     public string serverAddress = "localhost";
     public SessionTier CurrentTier { get; private set; } = SessionTier.None;
@@ -286,6 +292,43 @@ public class VRNetworkManager : MonoBehaviour
         StopSession();
         await Task.Delay(500);
         await StartSandboxSessionAsync();
+    }
+
+    // ------------------------------------------------------------------ drawing relay
+
+    /// <summary>
+    /// Server only: spawns the DrawingSync relay into the given game scene, so every client that is in that
+    /// scene (the host's own client and joiners) observes it. Safe to call repeatedly.
+    /// </summary>
+    public void SpawnDrawingSync(Scene scene)
+    {
+        NetworkManager nm = InstanceFinder.NetworkManager;
+        if (nm == null || !nm.IsServerStarted || !scene.IsValid() || !scene.isLoaded) return;
+
+        if (drawingSyncPrefab == null)
+        {
+            Debug.LogError("[Network] The DrawingSync prefab is not assigned on VRNetworkManager - drawing stays local.");
+            return;
+        }
+        if (DrawingSync.ExistsInScene(scene)) return;
+
+        GameObject go = Instantiate(drawingSyncPrefab);
+        UnitySceneManager.MoveGameObjectToScene(go, scene); // FishNet observes objects by the scene they are in
+        nm.ServerManager.Spawn(go);
+        Debug.Log($"[Network] Spawned DrawingSync in scene '{scene.name}'.");
+    }
+
+    /// <summary>Server only: despawns the DrawingSync relay (call before the game scene is unloaded).</summary>
+    public void DespawnDrawingSync()
+    {
+        NetworkManager nm = InstanceFinder.NetworkManager;
+        if (nm == null || !nm.IsServerStarted) return;
+
+        foreach (DrawingSync sync in FindObjectsOfType<DrawingSync>())
+        {
+            if (sync.NetworkObject != null && sync.NetworkObject.IsSpawned)
+                nm.ServerManager.Despawn(sync.NetworkObject);
+        }
     }
 
     // Stop networking before Unity destroys SteamManager, which fixes the

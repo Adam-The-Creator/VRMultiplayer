@@ -63,7 +63,7 @@ public class SessionDrawingButton : MonoBehaviour
                         PlayerPrefs.SetString("DrawingToLoad", drawing.id);
                         PlayerPrefs.SetInt("LoadMode", 1);
                         PlayerPrefs.Save();
-                        SceneManager.LoadScene(sceneToLoad);
+                        _ = NetworkSceneFlow.EnterGameSceneAsync(sceneToLoad); // additive, keeps Core alive
                     }
                     OnClick?.Invoke();
                 });

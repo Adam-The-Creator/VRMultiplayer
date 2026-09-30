@@ -67,7 +67,12 @@ public class DrawingSceneManager : MonoBehaviour
             return;
         }
 
-        VRDrawing vrDrawingComponent = FindObjectOfType<VRDrawing>();
+        VRDrawing vrDrawingComponent = await WaitForVRDrawingAsync();
+        if (vrDrawingComponent == null)
+        {
+            Debug.LogError("DrawingSceneManager: No VRDrawing object found - cannot show the loaded drawing.");
+            return;
+        }
 
         // Clean up existing children if any
         GameObject drawingObject = vrDrawingComponent.gameObject;
@@ -138,11 +143,11 @@ public class DrawingSceneManager : MonoBehaviour
 
     private async Task ClearDrawingAsync()
     {
-        VRDrawing vrDrawingComponent = FindObjectOfType<VRDrawing>();
-        while (vrDrawingComponent == null)
+        VRDrawing vrDrawingComponent = await WaitForVRDrawingAsync();
+        if (vrDrawingComponent == null)
         {
-            await Task.Yield();
-            vrDrawingComponent = FindObjectOfType<VRDrawing>();
+            Debug.LogError("DrawingSceneManager: No VRDrawing object found - nothing to clear.");
+            return;
         }
 
         foreach (Transform child in vrDrawingComponent.transform)
@@ -150,5 +155,18 @@ public class DrawingSceneManager : MonoBehaviour
             Destroy(child.gameObject);
         }
         vrDrawingComponent.drawing.lines.Clear();
+    }
+
+    // The drawing lives in Core and is always active, but never wait forever for it.
+    private static async Task<VRDrawing> WaitForVRDrawingAsync(float timeoutSeconds = 5f)
+    {
+        float start = Time.realtimeSinceStartup;
+        VRDrawing found = FindObjectOfType<VRDrawing>();
+        while (found == null && Time.realtimeSinceStartup - start < timeoutSeconds)
+        {
+            await Task.Yield();
+            found = FindObjectOfType<VRDrawing>();
+        }
+        return found;
     }
 }

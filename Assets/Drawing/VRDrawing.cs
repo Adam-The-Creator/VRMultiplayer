@@ -1,232 +1,149 @@
-﻿using Assets.Database.DatabaseManagement;
-using Assets.Database.DatabaseManagement.MongoDB;
-using FishNet.Object;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Assets.Database.DatabaseManagement;
+using Assets.Database.DatabaseManagement.MongoDB;
 using UnityEngine;
 
-[RequireComponent(typeof(NetworkObject))]
-public class VRDrawing : NetworkBehaviour
+/// <summary>
+/// The drawing of THIS machine: its data (Drawing) and the line objects of remote players.
+///
+/// This is deliberately a plain MonoBehaviour that lives in Core and is always active. It used to be a
+/// NetworkBehaviour scene object, but FishNet keeps scene objects disabled for clients that are not
+/// "in" the object's scene, so a joining client never had a usable Drawing (no strokes, NullReference when
+/// loading the saved drawing).
+///
+/// Local-first: every local action is applied here immediately (the same as offline single-player) and is then
+/// relayed to the other players through <see cref="DrawingSync"/> when a network session is live.
+/// Actions that arrive from other players are applied with the ApplyRemote... methods.
+/// </summary>
+public class VRDrawing : MonoBehaviour
 {
     [SerializeField] private Material defaultLineMaterial;
     public Drawing drawing;
 
     private void Awake()
     {
-        // Guarantee the object and its lists are instantiated before FishNet starts
         drawing ??= new Drawing();
     }
 
-    private void Start()
+    // ------------------------------------------------------------------ helpers
+
+    private Line FindLine(string lineId)
     {
-        Debug.Log($"[VRDrawing] '{name}' scene={gameObject.scene.name} sceneObject={NetworkObject.IsSceneObject} spawned={IsSpawned}");
+        if (drawing?.lines == null || string.IsNullOrEmpty(lineId)) return null;
+        // The line being drawn is almost always the newest one, so search from the end.
+        for (int i = drawing.lines.Count - 1; i >= 0; --i)
+        {
+            if (drawing.lines[i].id == lineId) return drawing.lines[i];
+        }
+        return null;
     }
-    // Lifecycle logs: they show whether this object is really live on the network (see NetActive below).
-    public override void OnStartServer() =>
-        Debug.Log($"[VRDrawing] '{name}' OnStartServer");
-    public override void OnStopServer() =>
-        Debug.Log($"[VRDrawing] '{name}' OnStopServer");
-    public override void OnStartClient() =>
-        Debug.Log($"[VRDrawing] '{name}' OnStartClient (host={IsServerInitialized}, lines={drawing?.lines?.Count ?? 0})");
-    public override void OnStopClient() =>
-        Debug.Log($"[VRDrawing] '{name}' OnStopClient");
 
-    // True only when THIS object is live on the network
-    private bool NetActive => IsSpawned && IsClientInitialized;
+    // ------------------------------------------------------------------ LINE CREATION
 
-    // --- LINE CREATION ---
-
+    // Called by the local drawer (Brush). The local LineRenderer is created by the Brush itself.
     public void AddNewLine(Line newLineData)
     {
-        if (NetActive)
-        {
-            CmdStartNewLine(newLineData);
-        }
-        else
-        {
-            // Local fallback for single-player
-            drawing.lines.Add(newLineData);
-        }
-    }
-
-    // 1. Client tells the Server they started a line
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdStartNewLine(Line newLineData)
-    {
-        // Server updates its master data
         drawing.lines.Add(newLineData);
-        // Server tells all clients to do the same
-        RpcStartNewLine(newLineData);
+        if (DrawingSync.TryGetLive(out DrawingSync sync)) sync.SendNewLine(newLineData);
     }
 
-    // 2. Server tells all Clients to spawn the line
-    [ObserversRpc]
-    private void RpcStartNewLine(Line newLineData)
+    // Called by DrawingSync when another player started a line.
+    public void ApplyRemoteNewLine(Line newLineData)
     {
-        // Don't add it twice on the server if the server is also a host/client
-        if (!IsServerInitialized)
+        if (newLineData == null || string.IsNullOrEmpty(newLineData.id)) return;
+        if (FindLine(newLineData.id) != null) return; // already known
+
+        if (newLineData.points == null) newLineData.points = new List<Point>();
+        if (newLineData.history == null) newLineData.history = new List<LineEvent>();
+        drawing.lines.Add(newLineData);
+
+        if (transform.Find(newLineData.id) != null) return;
+
+        GameObject lineObject = new GameObject(newLineData.id);
+        lineObject.transform.SetParent(transform);
+
+        LineRenderer lr = lineObject.AddComponent<LineRenderer>();
+        if (defaultLineMaterial != null) lr.material = defaultLineMaterial;
+        else lr.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        lr.useWorldSpace = true;
+        lr.startWidth = newLineData.startWidth;
+        lr.endWidth = newLineData.endWidth;
+        lr.startColor = newLineData.startColor != null ? newLineData.startColor.ToColor() : Color.black;
+        lr.endColor = newLineData.endColor != null ? newLineData.endColor.ToColor() : Color.black;
+
+        lr.positionCount = newLineData.points.Count;
+        for (int i = 0; i < newLineData.points.Count; i++)
         {
-            drawing.lines.Add(newLineData);
+            lr.SetPosition(i, newLineData.points[i].ToVector3());
         }
 
-        // Only spawn visually for remote players. The local drawer already has the line.
-        if (newLineData.userID != AuthManager.GetCurrentUserID() && transform.Find(newLineData.id) == null)
-        {
-            GameObject lineObject = new(newLineData.id);
-            lineObject.transform.SetParent(this.transform);
-
-            LineRenderer lr = lineObject.AddComponent<LineRenderer>();
-            if (defaultLineMaterial != null) lr.material = defaultLineMaterial;
-            else lr.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
-            lr.useWorldSpace = true;
-            lr.startWidth = newLineData.startWidth;
-            lr.endWidth = newLineData.endWidth;
-            lr.startColor = newLineData.startColor.ToColor();
-            lr.endColor = newLineData.endColor.ToColor();
-
-            lr.positionCount = newLineData.points.Count;
-            for (int i = 0; i < newLineData.points.Count; i++)
-            {
-                lr.SetPosition(i, newLineData.points[i].ToVector3());
-            }
-
-            lineObject.tag = "Line";
-        }
+        lineObject.tag = "Line";
     }
 
-    // --- POINT ADDITION ---
+    // ------------------------------------------------------------------ POINT ADDITION
 
     public void AddNewPointToLine(string lineId, Point newPoint)
     {
-        if (NetActive)
-        {
-            CmdAddPointToLine(lineId, newPoint);
-        }
-        else
-        {
-            // Local fallback for single-player
-            for (int i = 0; i < drawing.lines.Count; i++)
-            {
-                if (drawing.lines[i].id == lineId)
-                {
-                    drawing.lines[i].points.Add(newPoint);
-                    break;
-                }
-            }
-        }
+        Line line = FindLine(lineId);
+        if (line != null) line.points.Add(newPoint);
+
+        if (DrawingSync.TryGetLive(out DrawingSync sync)) sync.SendPoint(lineId, newPoint);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdAddPointToLine(string lineId, Point newPoint)
+    public void ApplyRemotePoint(string lineId, Point newPoint)
     {
-        RpcAddPointToLine(lineId, newPoint);
-    }
+        Line line = FindLine(lineId);
+        if (line == null) return;
 
-    [ObserversRpc]
-    private void RpcAddPointToLine(string lineId, Point newPoint)
-    {
-        // Find the line in the local database and add the point
-        for (int i = 0; i < drawing.lines.Count; i++)
+        if (line.points == null) line.points = new List<Point>();
+        line.points.Add(newPoint);
+
+        Transform lineObj = transform.Find(lineId);
+        if (lineObj != null && lineObj.TryGetComponent<LineRenderer>(out var lr))
         {
-            if (drawing.lines[i].id == lineId)
-            {
-                drawing.lines[i].points.Add(newPoint);
-
-                // Update physical LineRenderer for remote clients
-                if (drawing.lines[i].userID != AuthManager.GetCurrentUserID())
-                {
-                    Transform lineObj = transform.Find(lineId);
-                    if (lineObj != null && lineObj.TryGetComponent<LineRenderer>(out var lr))
-                    {
-                        lr.positionCount++;
-                        lr.SetPosition(lr.positionCount - 1, newPoint.ToVector3());
-                    }
-                }
-                break;
-            }
+            lr.positionCount++;
+            lr.SetPosition(lr.positionCount - 1, newPoint.ToVector3());
         }
     }
 
-    // --- ERASURE ---
+    // ------------------------------------------------------------------ ERASURE
 
     public void EraseLine(string lineId, string playerID, string timestamp, Hand hand)
     {
-        if (NetActive)
-        {
-            CmdEraseLine(lineId, playerID, timestamp, hand);
-        }
-        else
-        {
-            // Local fallback for single-player
-            for (int idx = 0; idx < drawing.lines.Count; ++idx)
-            {
-                if (drawing.lines[idx].id == lineId)
-                {
-                    drawing.lines[idx].status = Status.ERASED;
-                    drawing.lines[idx].history.Add(new LineEvent(LineEventType.ERASE, playerID, timestamp, hand));
-                    // Find the physical GameObject with this lineId and disable its renderer/collider
-                    Transform lineObj = transform.Find(lineId);
-                    if (lineObj != null)
-                    {
-                        if (lineObj.TryGetComponent<Renderer>(out var ren)) ren.enabled = false;
-                        if (lineObj.TryGetComponent<Collider>(out var col)) col.enabled = false;
-                    }
-                    break;
-                }
-            }
-        }
+        ApplyErase(lineId, playerID, timestamp, hand);
+        if (DrawingSync.TryGetLive(out DrawingSync sync)) sync.SendErase(lineId, playerID, timestamp, hand);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void CmdEraseLine(string lineId, string playerID, string timestamp, Hand hand)
+    public void ApplyRemoteErase(string lineId, string playerID, string timestamp, Hand hand)
     {
-        RpcEraseLine(lineId, playerID, timestamp, hand);
+        ApplyErase(lineId, playerID, timestamp, hand);
     }
 
-    [ObserversRpc]
-    private void RpcEraseLine(string lineId, string playerID, string timestamp, Hand hand)
+    private void ApplyErase(string lineId, string playerID, string timestamp, Hand hand)
     {
-        for (int idx = 0; idx < drawing.lines.Count; ++idx)
-        {
-            if (drawing.lines[idx].id == lineId)
-            {
-                drawing.lines[idx].status = Status.ERASED;
-                drawing.lines[idx].history.Add(new LineEvent(LineEventType.ERASE, playerID, timestamp, hand));
+        Line line = FindLine(lineId);
+        if (line == null) return;
 
-                // Find the physical GameObject with this lineId and disable its renderer/collider
-                Transform lineObj = transform.Find(lineId);
-                if (lineObj != null)
-                {
-                    if (lineObj.TryGetComponent<Renderer>(out var ren)) ren.enabled = false;
-                    if (lineObj.TryGetComponent<Collider>(out var col)) col.enabled = false;
-                }
-                break;
-            }
+        line.status = Status.ERASED;
+        if (line.history == null) line.history = new List<LineEvent>();
+        line.history.Add(new LineEvent(LineEventType.ERASE, playerID, timestamp, hand));
+
+        // Find the physical GameObject with this lineId and disable its renderer/collider
+        Transform lineObj = transform.Find(lineId);
+        if (lineObj != null)
+        {
+            if (lineObj.TryGetComponent<Renderer>(out var ren)) ren.enabled = false;
+            if (lineObj.TryGetComponent<Collider>(out var col)) col.enabled = false;
         }
     }
 
-    // --- DATABASE SAVE (NEW RECORD) ---
+    // ------------------------------------------------------------------ DATABASE SAVE (NEW RECORD)
 
-    // Called by a UI Button click
+    // Called by a UI Button click. Every machine holds the complete drawing (its own strokes plus the strokes
+    // relayed by the other players), so it can be saved locally without any network round trip.
     public void RequestSaveDrawing(string drawingName, string ownerId, GameType gameType, string sessionId)
     {
-        if (NetActive)
-        {
-            // Tell the authoritative server to initiate the save process
-            CmdSaveDrawingToDatabase(drawingName, ownerId, gameType, sessionId);
-        }
-        else
-        {
-            // Local fallback for single-player
-            _ = SaveDrawingTaskAsync(drawingName, ownerId, gameType, sessionId);
-        }
-    }
-
-    // 1. The RPC must be standard void, NOT async.
-    [ServerRpc(RequireOwnership = false)]
-    private void CmdSaveDrawingToDatabase(string drawingName, string ownerId, GameType gameType, string sessionId)
-    {
-        // 2. Launch the asynchronous database task without awaiting it directly in the RPC signature
         _ = SaveDrawingTaskAsync(drawingName, ownerId, gameType, sessionId);
     }
 
@@ -253,22 +170,9 @@ public class VRDrawing : NetworkBehaviour
         else Debug.LogError($"[DB] Failed to save drawing '{drawingName}'.");
     }
 
-    // --- DATABASE UPDATE (EXISTING RECORD) ---
+    // ------------------------------------------------------------------ DATABASE UPDATE (EXISTING RECORD)
 
     public void RequestUpdateDrawing(string drawingId, string drawingName)
-    {
-        if (NetActive)
-        {
-            CmdUpdateDrawingInDatabase(drawingId, drawingName);
-        }
-        else
-        {
-            _ = UpdateDrawingTaskAsync(drawingId, drawingName);
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void CmdUpdateDrawingInDatabase(string drawingId, string drawingName)
     {
         _ = UpdateDrawingTaskAsync(drawingId, drawingName);
     }
