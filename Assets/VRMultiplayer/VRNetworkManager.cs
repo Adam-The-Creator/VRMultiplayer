@@ -4,6 +4,7 @@ using Assets.Database.DatabaseManagement;
 using FishNet;
 using FishNet.Managing;
 using FishNet.Transporting;
+using Steamworks;
 using UnityEngine;
 using MultipassTransport = FishNet.Transporting.Multipass.Multipass;
 using SteamTransport = FishySteamworks.FishySteamworks;
@@ -19,9 +20,18 @@ public class VRNetworkManager : MonoBehaviour
     [Tooltip("Seconds to wait for the local client to authenticate on each transport before falling back.")]
     [SerializeField] private float tierTimeoutSeconds = 5f;
 
+    [Tooltip("Seconds to wait for the Steam connection to a remote host before giving up.")]
+    [SerializeField] private float joinTimeoutSeconds = 20f;
+
     public string serverAddress = "localhost";
     public SessionTier CurrentTier { get; private set; } = SessionTier.None;
     public event Action<SessionTier> OnSessionReady;
+
+    /// <summary>True while a join to a remote room is in progress.</summary>
+    public bool IsJoining { get; private set; }
+
+    /// <summary>Human-readable reason of the last failed join (for the UI).</summary>
+    public string LastJoinError { get; private set; }
 
     private bool _starting;
     private bool _quitting;
@@ -36,6 +46,16 @@ public class VRNetworkManager : MonoBehaviour
             return nm != null && nm.IsClientStarted
                    && nm.ClientManager.Connection != null
                    && nm.ClientManager.Connection.IsAuthenticated;
+        }
+    }
+
+    /// <summary>True when this instance is only a client of somebody else's room (no local server).</summary>
+    public bool IsRemoteClient
+    {
+        get
+        {
+            NetworkManager nm = InstanceFinder.NetworkManager;
+            return nm != null && nm.IsClientStarted && !nm.IsServerStarted;
         }
     }
 
@@ -156,6 +176,9 @@ public class VRNetworkManager : MonoBehaviour
             bool ok = winner == result.Task && result.Task.Result;
             if (!ok)
             {
+                Debug.LogWarning($"[Network] {tier} client failed " +
+                                 $"({(winner == result.Task ? "refused or kicked" : $"timed out after {timeout}s")}) " +
+                                 $"address='{address}'");
                 nm.ClientManager.StopConnection();
                 await Task.Delay(300); // let FishNet finish stopping before the next tier starts
             }
@@ -189,39 +212,80 @@ public class VRNetworkManager : MonoBehaviour
         CurrentTier = SessionTier.None;
     }
 
-    // Called when the player joins a Room Code (Steam ID of the host).
+    // ------------------------------------------------------------------ remote rooms
+
+    /// <summary>Fire-and-forget variant kept for existing callers. Prefer <see cref="JoinRemoteSessionAsync"/>.</summary>
     public async void JoinRemoteSession(string address)
     {
-        try { await JoinRemoteAsync(address); }
+        try { await JoinRemoteSessionAsync(address); }
         catch (Exception e) { Debug.LogException(e); }
     }
 
-    private async Task JoinRemoteAsync(string address)
+    /// <summary>
+    /// Leaves the local sandbox and connects to a remote host (address = the host's SteamID64).
+    /// Returns true once the client is authenticated. On failure the local sandbox is restarted and
+    /// <see cref="LastJoinError"/> says why.
+    /// </summary>
+    public async Task<bool> JoinRemoteSessionAsync(string address)
     {
-        NetworkManager nm = InstanceFinder.NetworkManager;
-        if (nm == null) return;
-        if (!SteamManager.Initialized)
+        if (IsJoining)
         {
-            Debug.LogError("[Network] Cannot join a Steam room: Steam is not initialised.");
-            return;
+            LastJoinError = "A join is already in progress.";
+            return false;
         }
 
-        Debug.Log("[Network] Leaving local sandbox to join remote room...");
+        IsJoining = true;
+        LastJoinError = null;
+        try
+        {
+            NetworkManager nm = InstanceFinder.NetworkManager;
+            if (nm == null) { LastJoinError = "No network manager."; return false; }
+            if (string.IsNullOrWhiteSpace(address)) { LastJoinError = "The room has no host address."; return false; }
+            address = address.Trim();
+
+            if (!SteamManager.Initialized)
+            {
+                LastJoinError = "Steam is not running.";
+                Debug.LogError("[Network] Cannot join a Steam room: Steam is not initialised.");
+                return false;
+            }
+            if (SteamUser.GetSteamID().m_SteamID.ToString() == address)
+            {
+                LastJoinError = "This room is hosted by your own Steam account.";
+                Debug.LogWarning("[Network] That room is hosted by this Steam account - you can't join your own room. " +
+                                 "Use a second machine and account.");
+                return false;
+            }
+
+            Debug.Log($"[Network] Leaving local sandbox to join remote room at '{address}'...");
+            StopSession();
+            await Task.Delay(500); // let FishNet clean up local network objects
+
+            serverAddress = address;
+            if (await TryClientTierAsync(nm, SessionTier.Steam, address, joinTimeoutSeconds))
+            {
+                CurrentTier = SessionTier.Steam;
+                Debug.Log($"[Network] Joined remote host at: {address}");
+                OnSessionReady?.Invoke(CurrentTier);
+                return true;
+            }
+
+            LastJoinError = "Could not connect to the host. Is the host online with Steam running?";
+            Debug.LogError($"[Network] Could not join the room at '{address}' - returning to local sandbox.");
+            await StartSandboxSessionAsync();
+            return false;
+        }
+        finally { IsJoining = false; }
+    }
+
+    /// <summary>Drops the remote connection and goes back to the local sandbox (own host + avatar).</summary>
+    public async Task LeaveRemoteSessionAsync()
+    {
+        if (_quitting) return;
+        Debug.Log("[Network] Leaving remote session - returning to local sandbox.");
         StopSession();
         await Task.Delay(500);
-
-        serverAddress = address;
-        if (await TryClientTierAsync(nm, SessionTier.Steam, address, 15f))
-        {
-            CurrentTier = SessionTier.Steam;
-            Debug.Log($"[Network] Joined remote host at: {address}");
-            OnSessionReady?.Invoke(CurrentTier);
-        }
-        else
-        {
-            Debug.LogError("[Network] Could not join the room - returning to local sandbox.");
-            await StartSandboxSessionAsync();
-        }
+        await StartSandboxSessionAsync();
     }
 
     // Stop networking before Unity destroys SteamManager, which fixes the
@@ -229,7 +293,16 @@ public class VRNetworkManager : MonoBehaviour
     private void OnApplicationQuit()
     {
         _quitting = true;
-        try { StopSession(); }
+        try
+        {
+            NetworkManager nm = InstanceFinder.NetworkManager;
+            if (nm != null)
+            {
+                nm.ServerManager.StopConnection(true);
+                nm.ClientManager.StopConnection();
+            }
+            CurrentTier = SessionTier.None;
+        }
         catch (Exception e) { Debug.LogException(e); }
     }
 }

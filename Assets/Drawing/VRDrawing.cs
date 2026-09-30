@@ -21,8 +21,15 @@ public class VRDrawing : NetworkBehaviour
     {
         Debug.Log($"[VRDrawing] '{name}' scene={gameObject.scene.name} sceneObject={NetworkObject.IsSceneObject} spawned={IsSpawned}");
     }
-    public override void OnStartServer() => Debug.Log($"[VRDrawing] '{name}' OnStartServer");
-    public override void OnStartClient() => Debug.Log($"[VRDrawing] '{name}' OnStartClient");
+    // Lifecycle logs: they show whether this object is really live on the network (see NetActive below).
+    public override void OnStartServer() =>
+        Debug.Log($"[VRDrawing] '{name}' OnStartServer");
+    public override void OnStopServer() =>
+        Debug.Log($"[VRDrawing] '{name}' OnStopServer");
+    public override void OnStartClient() =>
+        Debug.Log($"[VRDrawing] '{name}' OnStartClient (host={IsServerInitialized}, lines={drawing?.lines?.Count ?? 0})");
+    public override void OnStopClient() =>
+        Debug.Log($"[VRDrawing] '{name}' OnStopClient");
 
     // True only when THIS object is live on the network
     private bool NetActive => IsSpawned && IsClientInitialized;

@@ -420,8 +420,9 @@ public class LobbyManager : MonoBehaviour
             PlayerPrefs.SetInt("LoadMode", 1);
             PlayerPrefs.Save();
 
-            SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
-            SceneManager.UnloadSceneAsync("Login");
+            // Loaded as a FishNet global scene (when the server runs) so remote joiners get it too.
+            // The lobby is unloaded automatically once the scene is ready.
+            _ = NetworkSceneFlow.EnterGameSceneAsync(sceneToLoad);
         }
         else
         {
@@ -443,8 +444,9 @@ public class LobbyManager : MonoBehaviour
             PlayerPrefs.SetInt("LoadMode", 0);
             PlayerPrefs.Save();
 
-            SceneManager.LoadScene(sceneToLoad, LoadSceneMode.Additive);
-            SceneManager.UnloadSceneAsync("Login");
+            // Loaded as a FishNet global scene (when the server runs) so remote joiners get it too.
+            // The lobby is unloaded automatically once the scene is ready.
+            _ = NetworkSceneFlow.EnterGameSceneAsync(sceneToLoad);
         }
     }
 

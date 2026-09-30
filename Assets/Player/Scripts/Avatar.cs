@@ -31,6 +31,7 @@ public class Avatar : NetworkBehaviour
         }
     }
 
+
     private void Update()
     {
         // Only the owner should dictate where the avatar is moving

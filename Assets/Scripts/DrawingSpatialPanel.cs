@@ -159,9 +159,9 @@ public class DrawingSpatialPanel : MonoBehaviour
                     vrDrawing.drawing.lines.Clear();
                 }
 
-                string environmentSceneName = gameObject.scene.name;
-                SceneManager.LoadScene("Login", LoadSceneMode.Additive);
-                SceneManager.UnloadSceneAsync(environmentSceneName);
+                // Host: unloads the global scene for everybody. Joined client: leaves the remote
+                // session first and returns to its own sandbox. Both end up in the lobby.
+                _ = NetworkSceneFlow.LeaveGameSceneAsync(gameObject.scene.name);
             });
         }
     }
