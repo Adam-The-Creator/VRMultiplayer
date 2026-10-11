@@ -271,7 +271,7 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 549073960410611900}
   _networkObjectCache: {fileID: 549073960410611900}
-  headTarget: {fileID: 8472693943866613444}
+  headTarget: {fileID: 0}
   leftHandTarget: {fileID: 0}
   rightHandTarget: {fileID: 0}
   avatarOffset: {x: 0, y: 0, z: 0}

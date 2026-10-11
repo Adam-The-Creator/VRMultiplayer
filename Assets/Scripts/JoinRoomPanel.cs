@@ -118,7 +118,11 @@ public class JoinRoomPanel : MonoBehaviour
         SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneToLoad));
         if (loginScene.isLoaded) SceneManager.UnloadSceneAsync(loginScene);
 
-        // 4. If the host closes the scene or the connection drops, send this player back to the lobby.
+        // 4. Put the player's own session/drawing back as soon as they leave the room (or quit); until then
+        //    their strokes are filed under the host's session.
+        NetworkSceneFlow.RememberLocalContext(RestorePrefs);
+
+        // 5. If the host closes the scene or the connection drops, send this player back to the lobby.
         NetworkSceneFlow.WatchRemoteSession(sceneToLoad);
     }
 

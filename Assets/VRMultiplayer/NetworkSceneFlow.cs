@@ -89,6 +89,13 @@ public static class NetworkSceneFlow
         _leaving = true;
         try
         {
+            // 0. The strokes live in Core (not in the game scene) and a joined player runs under the host's
+            //    session. Reset both here so it works for every way out (Back button, the host closing the
+            //    session, a lost connection) and nothing of the finished session lingers in the lobby.
+            VRDrawing drawing = UnityEngine.Object.FindObjectOfType<VRDrawing>();
+            if (drawing != null) drawing.ClearAll();
+            RestoreLocalContext();
+
             // 1. Bring the lobby back first so the player is never left without a UI.
             if (!UnitySceneManager.GetSceneByName(lobbyScene).isLoaded)
             {
@@ -155,6 +162,31 @@ public static class NetworkSceneFlow
         }
         catch (Exception e) { Debug.LogException(e); }
         finally { _watching = false; }
+    }
+
+    // ------------------------------------------------------------------ joined-room context
+
+    // A player who joins a room temporarily runs under the host's session/drawing (JoinRoomPanel writes them into
+    // PlayerPrefs). This remembers how to put the player's own values back when they leave - or quit - so their
+    // later drawings are not filed under somebody else's session.
+    private static Action _restoreLocalContext;
+
+    /// <summary>Registers the action that restores the player's own session context when they leave the room.</summary>
+    public static void RememberLocalContext(Action restore)
+    {
+        _restoreLocalContext = restore;
+        Application.quitting -= RestoreLocalContext; // never subscribe twice
+        Application.quitting += RestoreLocalContext;
+    }
+
+    private static void RestoreLocalContext()
+    {
+        Application.quitting -= RestoreLocalContext;
+        Action restore = _restoreLocalContext;
+        _restoreLocalContext = null;
+
+        try { restore?.Invoke(); }
+        catch (Exception e) { Debug.LogException(e); }
     }
 
     private static void UnloadIfLoaded(string sceneName)

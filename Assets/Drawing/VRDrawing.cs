@@ -21,9 +21,45 @@ public class VRDrawing : MonoBehaviour
     [SerializeField] private Material defaultLineMaterial;
     public Drawing drawing;
 
+    // Strokes of other players only get an erase collider once they stop receiving points: the relay has no
+    // "end of stroke" message, and re-baking after every point would be quadratic. Local strokes get their
+    // collider from the Brush, saved ones from DrawingSceneManager.
+    private const float ColliderIdleSeconds = 0.5f;
+    private readonly Dictionary<string, float> _pendingColliders = new(); // lineId -> time of the last remote point
+    private readonly List<string> _readyColliders = new();
+
     private void Awake()
     {
         drawing ??= new Drawing();
+    }
+
+    private void Update()
+    {
+        if (_pendingColliders.Count == 0) return;
+
+        float now = Time.unscaledTime;
+        _readyColliders.Clear();
+        foreach (KeyValuePair<string, float> pending in _pendingColliders)
+        {
+            if (now - pending.Value >= ColliderIdleSeconds) _readyColliders.Add(pending.Key);
+        }
+
+        foreach (string lineId in _readyColliders)
+        {
+            _pendingColliders.Remove(lineId);
+            BakeCollider(lineId);
+        }
+    }
+
+    /// <summary>
+    /// Removes every stroke (objects and data). Called when the player leaves a game scene, so the strokes of a
+    /// finished session never stay visible in the lobby.
+    /// </summary>
+    public void ClearAll()
+    {
+        _pendingColliders.Clear();
+        foreach (Transform child in transform) Destroy(child.gameObject);
+        drawing?.lines?.Clear();
     }
 
     // ------------------------------------------------------------------ helpers
@@ -37,6 +73,31 @@ public class VRDrawing : MonoBehaviour
             if (drawing.lines[i].id == lineId) return drawing.lines[i];
         }
         return null;
+    }
+
+    // Gives a remote stroke a MeshCollider (the same way the Brush does for local strokes) so the eraser can hit it.
+    private void BakeCollider(string lineId)
+    {
+        Line line = FindLine(lineId);
+        if (line == null || line.status == Status.ERASED) return;
+
+        Transform lineObj = transform.Find(lineId);
+        if (lineObj == null || !lineObj.TryGetComponent<LineRenderer>(out var lr) || lr.positionCount < 2) return;
+
+        // Rebuild when the other player kept drawing after an earlier bake. An existing collider is never
+        // re-enabled here, so an erased stroke stays erased.
+        if (lineObj.TryGetComponent<MeshCollider>(out var meshCollider))
+        {
+            if (meshCollider.sharedMesh != null) Destroy(meshCollider.sharedMesh);
+        }
+        else
+        {
+            meshCollider = lineObj.gameObject.AddComponent<MeshCollider>();
+        }
+
+        Mesh bakedMesh = new();
+        lr.BakeMesh(bakedMesh, true);
+        meshCollider.sharedMesh = bakedMesh;
     }
 
     // ------------------------------------------------------------------ LINE CREATION
@@ -79,6 +140,7 @@ public class VRDrawing : MonoBehaviour
         }
 
         lineObject.tag = "Line";
+        _pendingColliders[newLineData.id] = Time.unscaledTime;
     }
 
     // ------------------------------------------------------------------ POINT ADDITION
@@ -104,6 +166,7 @@ public class VRDrawing : MonoBehaviour
         {
             lr.positionCount++;
             lr.SetPosition(lr.positionCount - 1, newPoint.ToVector3());
+            _pendingColliders[lineId] = Time.unscaledTime; // (re)bake the erase collider once the stroke goes idle
         }
     }
 
@@ -122,6 +185,8 @@ public class VRDrawing : MonoBehaviour
 
     private void ApplyErase(string lineId, string playerID, string timestamp, Hand hand)
     {
+        _pendingColliders.Remove(lineId); // an erased stroke must not get a (hittable) collider afterwards
+
         Line line = FindLine(lineId);
         if (line == null) return;
 

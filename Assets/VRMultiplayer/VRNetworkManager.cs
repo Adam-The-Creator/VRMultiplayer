@@ -73,7 +73,16 @@ public class VRNetworkManager : MonoBehaviour
 
     private async void Start()
     {
-        // The DB is not needed for networking or the avatar, so never block on it.
+        // The DB is not needed for networking or the avatar, so never wait for it: it is checked in the
+        // background while the session starts. (Awaiting it first delayed the avatar by up to ~13 s when the
+        // database was offline: ping timeout + 3 s local boot wait + second ping.)
+        _ = EnsureDatabaseAsync();
+
+        await StartSandboxSessionAsync();
+    }
+
+    private static async Task EnsureDatabaseAsync()
+    {
         try
         {
             await DatabaseManager.Instance.StartDBServerIfNeeded();
@@ -81,8 +90,6 @@ public class VRNetworkManager : MonoBehaviour
                 Debug.LogError("[Network] Database is not online - login/drawings won't work, session still starts.");
         }
         catch (Exception e) { Debug.LogException(e); }
-
-        await StartSandboxSessionAsync();
     }
 
     // Kept for existing callers. Starts the sandbox in the background.
