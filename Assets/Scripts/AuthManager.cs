@@ -191,6 +191,12 @@ public class AuthManager : MonoBehaviour
 
     void Start()
     {
+        // The login token is only kept in memory, so a user id left in PlayerPrefs by a previous run is not a
+        // valid login anymore. Clear it so the rest of the game sees the same state as a fresh start.
+        if (HasStoredUser() && !DatabaseManager.IsAuthenticated) ClearStoredUser();
+
+        DatabaseManager.OnSessionExpired += HandleSessionExpired;
+
         loginPanel.Initialize();
         signupPanel.Initialize();
 
@@ -245,15 +251,30 @@ public class AuthManager : MonoBehaviour
         }
     }
 
+    void OnDestroy()
+    {
+        DatabaseManager.OnSessionExpired -= HandleSessionExpired;
+    }
+
+    // The server rejected our token (expired, or the server was restarted): back to the login screen.
+    private void HandleSessionExpired()
+    {
+        Debug.LogWarning("AuthManager: The session has expired, please log in again.");
+        Logout();
+        loginPanel.WriteFeedbackError("Your session has expired. Please log in again.");
+    }
+
     public void Logout()
     {
-        if (!IsLoggedIn())
+        // Checks the stored user (not IsLoggedIn) so that this also works after the token has been cleared.
+        if (!HasStoredUser())
         {
             Debug.LogWarning("AuthManager: No user is currently logged in.");
             return;
         }
         Debug.Log($"AuthManager: Logging out user: {GetCurrentUsername()}");
 
+        DatabaseManager.ClearSession();
         PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
 
@@ -267,7 +288,19 @@ public class AuthManager : MonoBehaviour
 
     public static bool IsLoggedIn()
     {
+        return HasStoredUser() && DatabaseManager.IsAuthenticated;
+    }
+
+    private static bool HasStoredUser()
+    {
         return PlayerPrefs.HasKey("CurrentUserID") && !string.IsNullOrEmpty(PlayerPrefs.GetString("CurrentUserID", null));
+    }
+
+    private static void ClearStoredUser()
+    {
+        PlayerPrefs.DeleteKey("CurrentUserID");
+        PlayerPrefs.DeleteKey("CurrentUsername");
+        PlayerPrefs.Save();
     }
 
     public static string GetCurrentUsername()

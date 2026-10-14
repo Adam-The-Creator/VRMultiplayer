@@ -51,6 +51,8 @@ namespace Assets.Database.DatabaseManagement
         {
             public string message;
             public string playerId;
+            public string accessToken;
+            public int expiresIn;   // seconds
         }
 
         [System.Serializable]
@@ -130,6 +132,29 @@ namespace Assets.Database.DatabaseManagement
         private static readonly string _database = "VRDrawingDB.db";
         private static string _databasePath;
         private Process pythonServerProcess;
+
+
+        // Authentication
+        // The JWT issued by /auth/login. It is only kept in memory and never written to disk, so a restart of
+        // the game always requires a new login.
+        private static string _accessToken;
+        private static DateTime _accessTokenExpiresUtc = DateTime.MinValue;
+
+        /// <summary>True while a login token is held and has not expired yet.</summary>
+        public static bool IsAuthenticated => !string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _accessTokenExpiresUtc;
+
+        /// <summary>
+        /// Raised when the server rejects the token (expired, or the server restarted with a new secret).
+        /// The token has already been cleared by then, so the listener only has to send the player back to login.
+        /// </summary>
+        public static event Action OnSessionExpired;
+
+        /// <summary>Forgets the login token. Called on logout and when the server rejects the token.</summary>
+        public static void ClearSession()
+        {
+            _accessToken = null;
+            _accessTokenExpiresUtc = DateTime.MinValue;
+        }
 
         void Start()
         {
@@ -249,7 +274,8 @@ namespace Assets.Database.DatabaseManagement
         // HTTP Request Helper
         // -------------------------------------------------------------------
 
-        private async Task<string> SendRequest(string endpoint, string method, string jsonBody = null)
+        // authenticated: false is only for the endpoints that are reachable without a login (login, sign up).
+        private async Task<string> SendRequest(string endpoint, string method, string jsonBody = null, bool authenticated = true)
         {
             using UnityWebRequest request = new(apiUrl + endpoint, method);
             if (jsonBody != null)
@@ -261,11 +287,23 @@ namespace Assets.Database.DatabaseManagement
             request.SetRequestHeader("Content-Type", "application/json");
             ApplyProfile(request);
 
+            // Set after ApplyProfile so that a profile's ExtraHeaders can never override the login token.
+            bool tokenSent = authenticated && !string.IsNullOrEmpty(_accessToken);
+            if (tokenSent) request.SetRequestHeader("Authorization", "Bearer " + _accessToken);
+
             var operation = request.SendWebRequest();
             while (!operation.isDone) await Task.Yield();
 
             if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
             {
+                if (request.responseCode == 401 && tokenSent)
+                {
+                    // The token we sent is no longer accepted: the player has to log in again.
+                    UnityEngine.Debug.LogWarning($"API ({method} {endpoint}): 401, the session expired. Login required.");
+                    ClearSession();
+                    OnSessionExpired?.Invoke();
+                    return null;
+                }
                 if (request.responseCode == 404)
                 {
                     string body = request.downloadHandler.text?.TrimStart();
@@ -530,11 +568,19 @@ namespace Assets.Database.DatabaseManagement
             }
 
             string json = JsonConvert.SerializeObject(loginMessage);
-            string response = await SendRequest("/auth/login", "POST", json);
+            string response = await SendRequest("/auth/login", "POST", json, authenticated: false);
 
             if (response != null)
             {
                 var authRes = JsonConvert.DeserializeObject<AuthResponse>(response);
+                if (string.IsNullOrEmpty(authRes?.accessToken) || authRes.expiresIn <= 0)
+                {
+                    UnityEngine.Debug.LogError("Login response contains no access token. Is the Database Server up to date?");
+                    return null;
+                }
+
+                _accessToken = authRes.accessToken;
+                _accessTokenExpiresUtc = DateTime.UtcNow.AddSeconds(authRes.expiresIn);
                 UnityEngine.Debug.Log("Login successful.");
                 return authRes.playerId;
             }
@@ -550,7 +596,7 @@ namespace Assets.Database.DatabaseManagement
             }
 
             string json = JsonConvert.SerializeObject(signUpMessage);
-            string response = await SendRequest("/auth/signup", "POST", json);
+            string response = await SendRequest("/auth/signup", "POST", json, authenticated: false);
 
             if (response != null)
             {
