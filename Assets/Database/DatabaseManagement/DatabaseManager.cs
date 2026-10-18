@@ -67,6 +67,9 @@ namespace Assets.Database.DatabaseManagement
             public List<Line> lines;
             public List<TrackedBehavior> trackedBehaviors;
             public List<PlacedModel> placedModels;
+            public List<DrawingEvent> events;
+            public string appVersion;
+            public string device;
         }
 
         [System.Serializable]
@@ -76,6 +79,7 @@ namespace Assets.Database.DatabaseManagement
             public List<Line> lines;
             public List<TrackedBehavior> trackedBehaviors;
             public List<PlacedModel> placedModels;
+            public List<DrawingEvent> events;
             public List<Collaborator> collaborators;
         }
 

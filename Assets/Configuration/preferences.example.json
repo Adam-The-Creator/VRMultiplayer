@@ -30,6 +30,8 @@
   },
   "Drawing": {
     "DestroyLineOnErase": false,
-    "DrawingBlockedScenes": ["Login"]
+    "DrawingBlockedScenes": ["Login"],
+    "TrackingEnabled": true,
+    "TrackingSampleRateHz": 10.0
   }
 }

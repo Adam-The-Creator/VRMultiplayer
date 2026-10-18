@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Assets.Database.DatabaseManagement.MongoDB
@@ -41,6 +42,19 @@ namespace Assets.Database.DatabaseManagement.MongoDB
             this.timestamp = timestamp;
         }
 
+        /// <summary>A tracked pose: it carries utcMs only, the string timestamp would cost more than the pose.</summary>
+        public Pose(Vector3 position, Quaternion rotation, long utcMs)
+        {
+            this.pX = position.x;
+            this.pY = position.y;
+            this.pZ = position.z;
+            this.rX = rotation.x;
+            this.rY = rotation.y;
+            this.rZ = rotation.z;
+            this.rW = rotation.w;
+            this.utcMs = utcMs;
+        }
+
         public Vector3 GetPosition()
         {
             return new Vector3(pX, pY, pZ);
@@ -65,7 +79,12 @@ namespace Assets.Database.DatabaseManagement.MongoDB
 
         public float rW;
 
+        [Tooltip("Legacy stamp, null for poses recorded with utcMs")]
         public string timestamp;
+
+        [Tooltip("UTC time in Unix milliseconds. 0 = not recorded")]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public long utcMs;
 
     }
 }

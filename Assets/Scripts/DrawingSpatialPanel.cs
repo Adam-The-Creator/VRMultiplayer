@@ -153,11 +153,7 @@ public class DrawingSpatialPanel : MonoBehaviour
                 }
 
                 VRDrawing vrDrawing = FindObjectOfType<VRDrawing>();
-                if (vrDrawing != null)
-                {
-                    foreach (Transform child in vrDrawing.transform) Destroy(child.gameObject);
-                    vrDrawing.drawing.lines.Clear();
-                }
+                if (vrDrawing != null) vrDrawing.ClearAll();
 
                 // Host: unloads the global scene for everybody. Joined client: leaves the remote
                 // session first and returns to its own sandbox. Both end up in the lobby.

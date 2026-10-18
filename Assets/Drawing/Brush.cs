@@ -36,10 +36,21 @@ public class Brush : MonoBehaviour
     [SerializeField, Range(0.0001f, 0.1f)] float drawingTreshold = 0.01f;
     private int index = 0;
     private bool isPainting = false;
+    private float triggerValue = 0f;    // analog value of the painting input, stored as the pressure of the points
     public DrawingMode drawingMode = DrawingMode.None;
     [SerializeField] private DrawingHandMenuLeft drawingHandMenuLeft;
     [SerializeField] private DrawingHandMenuRight drawingHandMenuRight;
     [SerializeField] public GameObject drawingObject;
+
+    // Tracking of this brush's tool changes. Colors and widths change continuously while a slider or picker is
+    // dragged, so such a change is only recorded once it stayed the same for a moment.
+    private const float SettledSeconds = 0.75f;
+    private DrawingMode watchedMode;
+    private bool watchedMenuOpen;
+    private Color watchedStartColor, watchedEndColor;
+    private float watchedStartWidth, watchedEndWidth;
+    private float colorChangedTime, widthChangedTime;
+    private bool colorChangePending, widthChangePending;
 
 
     private void Start()
@@ -51,37 +62,106 @@ public class Brush : MonoBehaviour
         }
         tipMaterial.color = brushStartColor;
         drawingMode = DrawingMode.None;
+
+        // The starting values are the baseline, not a change.
+        watchedMode = drawingMode;
+        watchedStartColor = brushStartColor;
+        watchedEndColor = brushEndColor;
+        watchedStartWidth = brushStartWidth;
+        watchedEndWidth = brushEndWidth;
     }
 
     private void Update()
     {
         if (ConfigurationManager.Current.Drawing.DrawingBlockedScenes.Contains(SceneManager.GetActiveScene().name)) return;
 
-        isPainting = (float)paintingInputAction.action.ReadValue<float>() > 0.5f;
+        triggerValue = paintingInputAction.action.ReadValue<float>();
+        isPainting = triggerValue > 0.5f;
 
-        if (!drawingHandMenuLeft.handMenuEnableState && !drawingHandMenuRight.handMenuEnableState)
+        TrackToolChanges();
+
+        bool menuOpen = drawingHandMenuLeft.handMenuEnableState || drawingHandMenuRight.handMenuEnableState;
+
+        if (!menuOpen && drawingMode == DrawingMode.Draw && isPainting) Paint();
+        else FinishStroke(); // released, or the menu was opened / the mode switched mid-stroke
+
+        if (!menuOpen && drawingMode == DrawingMode.Erase && isPainting) Erase();
+    }
+
+    // Closes the stroke in progress: it gets its erase collider and the next press starts a new stroke.
+    private void FinishStroke()
+    {
+        if (currentLine == null) return;
+
+        if (currentLine.gameObject.GetComponent<MeshCollider>() == null)
         {
-            if (drawingMode == DrawingMode.Draw)
-            {
-                if (isPainting) Paint();
-                else if (currentLine != null)
-                {
-                    if (currentLine.gameObject.GetComponent<MeshCollider>() == null)
-                    {
-                        MeshCollider meshCollider = currentLine.gameObject.AddComponent<MeshCollider>();
-                        Mesh bakedMesh = new();
-                        currentLine.BakeMesh(bakedMesh, useTransform: true);
-                        meshCollider.sharedMesh = bakedMesh;
-                    }
-                    currentLine.gameObject.tag = "Line";
-                    currentLine = null;
-                }
-            }
-            else if (drawingMode == DrawingMode.Erase)
-            {
-                if (isPainting) Erase();
-            }
+            MeshCollider meshCollider = currentLine.gameObject.AddComponent<MeshCollider>();
+            Mesh bakedMesh = new();
+            currentLine.BakeMesh(bakedMesh, useTransform: true);
+            meshCollider.sharedMesh = bakedMesh;
         }
+        currentLine.gameObject.tag = "Line";
+        currentLine = null;
+    }
+
+    // Records mode, menu, color and width changes of this hand (when tracking is enabled).
+    private void TrackToolChanges()
+    {
+        if (!ConfigurationManager.Current.Drawing.TrackingEnabled) return;
+
+        VRDrawing target = GetVRDrawing();
+        if (target == null) return;
+
+        if (drawingMode != watchedMode)
+        {
+            watchedMode = drawingMode;
+            target.RecordEvent(DrawingEventType.MODE_CHANGE, handType, drawingMode.ToString());
+        }
+
+        bool ownMenuOpen = handType == Hand.LEFT ? drawingHandMenuLeft.handMenuEnableState : drawingHandMenuRight.handMenuEnableState;
+        if (ownMenuOpen != watchedMenuOpen)
+        {
+            watchedMenuOpen = ownMenuOpen;
+            target.RecordEvent(ownMenuOpen ? DrawingEventType.MENU_OPEN : DrawingEventType.MENU_CLOSE, handType);
+        }
+
+        if (brushStartColor != watchedStartColor || brushEndColor != watchedEndColor)
+        {
+            watchedStartColor = brushStartColor;
+            watchedEndColor = brushEndColor;
+            colorChangedTime = Time.unscaledTime;
+            colorChangePending = true;
+        }
+        else if (colorChangePending && Time.unscaledTime - colorChangedTime >= SettledSeconds)
+        {
+            colorChangePending = false;
+            target.RecordEvent(DrawingEventType.COLOR_CHANGE, handType,
+                $"start=#{ColorUtility.ToHtmlStringRGBA(brushStartColor)} end=#{ColorUtility.ToHtmlStringRGBA(brushEndColor)}");
+        }
+
+        if (brushStartWidth != watchedStartWidth || brushEndWidth != watchedEndWidth)
+        {
+            watchedStartWidth = brushStartWidth;
+            watchedEndWidth = brushEndWidth;
+            widthChangedTime = Time.unscaledTime;
+            widthChangePending = true;
+        }
+        else if (widthChangePending && Time.unscaledTime - widthChangedTime >= SettledSeconds)
+        {
+            widthChangePending = false;
+            target.RecordEvent(DrawingEventType.WIDTH_CHANGE, handType,
+                $"start={brushStartWidth:F4} end={brushEndWidth:F4}");
+        }
+    }
+
+    private VRDrawing GetVRDrawing()
+    {
+        if (drawingObject == null)
+        {
+            VRDrawing found = FindObjectOfType<VRDrawing>();
+            if (found != null) drawingObject = found.gameObject;
+        }
+        return drawingObject != null && drawingObject.TryGetComponent<VRDrawing>(out VRDrawing vrDrawing) ? vrDrawing : null;
     }
 
     public void SetStartColor(Color color)
@@ -117,7 +197,7 @@ public class Brush : MonoBehaviour
             /* Initialize the LineRenderer with the first position */
             index = 0;
             currentLine = new GameObject(name: $"{GetUniqueLineID()}").AddComponent<LineRenderer>();
-            currentLine.material = paintingMaterial;
+            currentLine.sharedMaterial = paintingMaterial; // .material would copy the material for every stroke
             currentLine.useWorldSpace = true;
             currentLine.startColor = brushStartColor;
             currentLine.endColor = brushEndColor;
@@ -132,6 +212,7 @@ public class Brush : MonoBehaviour
             {
                 Enum.TryParse(handType.ToString(), out Hand parsedHand);
                 string playerID = AuthManager.GetCurrentUserID();
+                string initialTimestamp = GetTimestamp();
 
                 Line newLine = new()
                 {
@@ -148,7 +229,7 @@ public class Brush : MonoBehaviour
                         new() {
                             eventType = LineEventType.DRAW,
                             invoker = playerID,
-                            timestamp = GetTimestamp(),
+                            timestamp = initialTimestamp,
                             hand = parsedHand
                         }
                     },
@@ -156,9 +237,8 @@ public class Brush : MonoBehaviour
                 };
 
                 pointTimestamps.Clear();
-                string initialTimestamp = GetTimestamp();
                 pointTimestamps.Add(initialTimestamp);
-                newLine.points.Add(new Point(brushTip.position, initialTimestamp));
+                newLine.points.Add(new Point(brushTip.position, initialTimestamp, VRDrawing.UtcNowMs(), triggerValue));
 
                 // Dispatch to network
                 vrDrawingData.AddNewLine(newLine);
@@ -186,7 +266,7 @@ public class Brush : MonoBehaviour
                     string pointTimestamp = GetTimestamp();
                     pointTimestamps.Add(pointTimestamp);
 
-                    Point newPoint = new(brushTip.position, pointTimestamp);
+                    Point newPoint = new(brushTip.position, pointTimestamp, VRDrawing.UtcNowMs(), triggerValue);
                     vrDrawingData.AddNewPointToLine(currentLine.name, newPoint);
                 }
                 else
@@ -235,6 +315,7 @@ public class Brush : MonoBehaviour
         }
     }
 
-    private string GetTimestamp() => DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_") + ((int)(DateTime.Now.Millisecond)).ToString("D3");
+    // The clock is read once: two reads can straddle a second boundary and give a stamp that is almost a second off.
+    private string GetTimestamp() => DateTime.Now.ToString("yyyy_MM_dd_HH_mm_ss_fff");
     private string GetUniqueLineID() => $"Line_{GetTimestamp()}_{Guid.NewGuid()}";
 }

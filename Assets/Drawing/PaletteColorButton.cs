@@ -63,19 +63,14 @@ public class PaletteColorButton : MonoBehaviour
 
         opacitySlider.onValueChanged.AddListener(opacityValue =>
         {
-            if (controllerSide == Side.Left)
-            {
-                DrawingHandMenuLeft drawingHandMenuLeft = drawingHandMenuObject.GetComponent<DrawingHandMenuLeft>();
-                if (A_ValueInput != null) A_ValueInput.text = opacityValue.ToString("F2");
-                brush.brushStartColor.a = opacityValue;
-                if (!drawingHandMenuLeft.IsGradientModeEnabled()) brush.brushEndColor.a = opacityValue;
-            }
+            if (A_ValueInput != null) A_ValueInput.text = opacityValue.ToString("F2");
+
+            // The slider of the end palette only belongs to the end color; without a gradient both colors are one.
+            if (isGradEndColor) brush.brushEndColor.a = opacityValue;
             else
             {
-                DrawingHandMenuRight drawingHandMenuRight = drawingHandMenuObject.GetComponent<DrawingHandMenuRight>();
-                if (A_ValueInput != null) A_ValueInput.text = opacityValue.ToString("F2");
                 brush.brushStartColor.a = opacityValue;
-                if (!drawingHandMenuRight.IsGradientModeEnabled()) brush.brushEndColor.a = opacityValue;
+                if (!IsGradientModeEnabled()) brush.brushEndColor.a = opacityValue;
             }
         });
 
@@ -83,38 +78,32 @@ public class PaletteColorButton : MonoBehaviour
 
         colorButton.onClick.AddListener(() =>
         {
-            if (controllerSide == Side.Left)
+            // The button only defines the color, the opacity is the one set on the slider of this palette.
+            Color pickedColor = buttonColor;
+            pickedColor.a = opacitySlider.value;
+
+            if (!IsGradientModeEnabled())
             {
-                DrawingHandMenuLeft drawingHandMenuLeft = drawingHandMenuObject.GetComponent<DrawingHandMenuLeft>();
-                if (!drawingHandMenuLeft.IsGradientModeEnabled())
-                {
-                    brush.SetStartColor(buttonColor);
-                    brush.SetEndColor(buttonColor);
-                }
-                else
-                {
-                    if (isGradEndColor) brush.SetEndColor(buttonColor);
-                    else brush.SetStartColor(buttonColor);
-                }
+                brush.SetStartColor(pickedColor);
+                brush.SetEndColor(pickedColor);
             }
-            else if (controllerSide == Side.Right)
+            else
             {
-                DrawingHandMenuRight drawingHandMenuRight = drawingHandMenuObject.GetComponent<DrawingHandMenuRight>();
-                if (!drawingHandMenuRight.IsGradientModeEnabled())
-                {
-                    brush.SetStartColor(buttonColor);
-                    brush.SetEndColor(buttonColor);
-                }
-                else
-                {
-                    if (isGradEndColor) brush.SetEndColor(buttonColor);
-                    else brush.SetStartColor(buttonColor);
-                }
+                if (isGradEndColor) brush.SetEndColor(pickedColor);
+                else brush.SetStartColor(pickedColor);
             }
 
             R_ValueInput.text = Mathf.RoundToInt(buttonColor.r * 255).ToString();
             G_ValueInput.text = Mathf.RoundToInt(buttonColor.g * 255).ToString();
             B_ValueInput.text = Mathf.RoundToInt(buttonColor.b * 255).ToString();
         });
+    }
+
+    // The gradient toggle lives in the hand menu of this button's side.
+    private bool IsGradientModeEnabled()
+    {
+        return controllerSide == Side.Left
+            ? drawingHandMenuObject.GetComponent<DrawingHandMenuLeft>().IsGradientModeEnabled()
+            : drawingHandMenuObject.GetComponent<DrawingHandMenuRight>().IsGradientModeEnabled();
     }
 }

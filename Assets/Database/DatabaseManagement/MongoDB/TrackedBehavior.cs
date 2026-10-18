@@ -17,14 +17,14 @@ namespace Assets.Database.DatabaseManagement.MongoDB
             List<Pose> head,
             List<Pose> rightHand,
             List<Pose> leftHand,
-            List<Pose> palyer
+            List<Pose> player
         )
         {
             this.playerID = playerID;
             this.head = head;
             this.rightHand = rightHand;
             this.leftHand = leftHand;
-            this.palyer = palyer;
+            this.player = player;
         }
 
         [Tooltip("The ID of the player whose behavior is being tracked.")]
@@ -39,8 +39,8 @@ namespace Assets.Database.DatabaseManagement.MongoDB
         [Tooltip("The list of left hand poses of the player during drawing.")]
         public List<Pose> leftHand;
 
-        [Tooltip("The list of player poses of the player during drawing.")]
-        public List<Pose> palyer;
+        [Tooltip("The list of poses of the player's rig (where the player stands) during drawing.")]
+        public List<Pose> player;
 
     }
 }

@@ -13,6 +13,7 @@ namespace Assets.Database.DatabaseManagement.MongoDB
             this.lines = new List<Line>();
             this.trackedBehaviors = new List<TrackedBehavior>();
             this.placedModels = new List<PlacedModel>();
+            this.events = new List<DrawingEvent>();
         }
 
         public Drawing(
@@ -26,6 +27,7 @@ namespace Assets.Database.DatabaseManagement.MongoDB
             this.lines = lines;
             this.trackedBehaviors = trackedBehaviors;
             this.placedModels = placedModels;
+            this.events = new List<DrawingEvent>();
         }
 
         [Tooltip("Metadata of the drawing")]
@@ -39,6 +41,9 @@ namespace Assets.Database.DatabaseManagement.MongoDB
 
         [Tooltip("List of models placed in the drawing")]
         public List<PlacedModel> placedModels;
+
+        [Tooltip("Changes of the players' tools and menus during the drawing (absent in drawings saved before)")]
+        public List<DrawingEvent> events;
 
     }
 }
