@@ -13,7 +13,7 @@
       },
       {
         "Name": "Ngrok",
-        "ServerURL": "https://your-tunnel-id.ngrok-free.app",
+        "ServerURL": "https://console-angelic-semantic.ngrok-free.dev",
         "Mode": "Remote",
         "LocalPythonScriptPath": "../DatabaseServer/server.py",
         "TimeoutSeconds": 8,
