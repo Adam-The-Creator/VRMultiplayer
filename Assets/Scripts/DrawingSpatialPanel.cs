@@ -64,7 +64,7 @@ public class DrawingSpatialPanel : MonoBehaviour
         // 3. Main Save Button Logic
         if (saveDrawingButton != null)
         {
-            saveDrawingButton.onClick.AddListener(() =>
+            saveDrawingButton.onClick.AddListener(async () =>
             {
                 if (feedbackText != null) feedbackText.text = "Sending save request...";
                 Debug.Log("Save button clicked in DrawingSpatialPanel.");
@@ -104,7 +104,8 @@ public class DrawingSpatialPanel : MonoBehaviour
                 {
                     // Save as completely new
                     GameType currentGameType = (GameType)PlayerPrefs.GetInt("SelectedGameType", (int)GameType.INNER_CHILD);
-                    string currentSessionId = PlayerPrefs.GetString("CurrentSessionID", "NoSession");
+                    string currentSessionId = await SessionContext.GetSceneSessionIdAsync();
+                    if (this == null) return; // the scene was unloaded while waiting
                     vrDrawing.RequestSaveDrawing(drawingName, currentUserId, currentGameType, currentSessionId);
                 }
 
@@ -115,7 +116,7 @@ public class DrawingSpatialPanel : MonoBehaviour
         // 4. Save As New Button Logic
         if (saveAsNewDrawingButton != null)
         {
-            saveAsNewDrawingButton.onClick.AddListener(() =>
+            saveAsNewDrawingButton.onClick.AddListener(async () =>
             {
                 if (feedbackText != null) feedbackText.text = "Sending save as new request...";
                 Debug.Log("Save As New button clicked.");
@@ -131,7 +132,8 @@ public class DrawingSpatialPanel : MonoBehaviour
                 if (drawingContainer == null || !drawingContainer.TryGetComponent<VRDrawing>(out var vrDrawing)) return;
 
                 GameType currentGameType = (GameType)PlayerPrefs.GetInt("SelectedGameType", (int)GameType.INNER_CHILD);
-                string currentSessionId = PlayerPrefs.GetString("CurrentSessionID", "NoSession");
+                string currentSessionId = await SessionContext.GetSceneSessionIdAsync();
+                if (this == null) return; // the scene was unloaded while waiting
 
                 // Save as a completely new drawing (does not modify loadedDrawingId, keeps it intact)
                 vrDrawing.RequestSaveDrawing(drawingName, currentUserId, currentGameType, currentSessionId);

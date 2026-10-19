@@ -281,6 +281,14 @@ namespace Assets.Database.DatabaseManagement
         // authenticated: false is only for the endpoints that are reachable without a login (login, sign up).
         private async Task<string> SendRequest(string endpoint, string method, string jsonBody = null, bool authenticated = true)
         {
+            // Without a token the server can only answer 401, so skip the round trip. This happens when something
+            // loads data before the login (or after the token was cleared) and the callers already handle null.
+            if (authenticated && string.IsNullOrEmpty(_accessToken))
+            {
+                UnityEngine.Debug.LogWarning($"API ({method} {endpoint}): skipped, not logged in.");
+                return null;
+            }
+
             using UnityWebRequest request = new(apiUrl + endpoint, method);
             if (jsonBody != null)
             {
@@ -512,6 +520,29 @@ namespace Assets.Database.DatabaseManagement
             }
 
             return response != null ? JsonConvert.DeserializeObject<string>(response) : null;
+        }
+
+        // The session new drawings are saved into. It lives on the server, so every PC and every login sees the same one;
+        // the server answers with its default session while no other session is active.
+        public async Task<string> GetActiveSessionId()
+        {
+            string response = await SendRequest("/sessions/active/id", "GET");
+            if (response == null || response.Contains("\"detail\"")) return null;
+
+            return JsonConvert.DeserializeObject<string>(response);
+        }
+
+        public async Task<bool> ActivateSession(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId)) return false;
+
+            string response = await SendRequest($"/sessions/{sessionId}/activate", "PUT");
+            if (response != null && !response.Contains("\"detail\""))
+            {
+                UnityEngine.Debug.Log($"Session {sessionId} is now the active session.");
+                return true;
+            }
+            return false;
         }
 
         public async Task<Session> GetSessionById(string sessionId)

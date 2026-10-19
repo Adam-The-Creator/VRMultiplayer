@@ -63,20 +63,18 @@ public class JoinRoomPanel : MonoBehaviour
             return;
         }
 
-        // Inject the joined room's context into PlayerPrefs (restored if the join fails).
-        string prevSession = PlayerPrefs.GetString("CurrentSessionID", "");
+        // Inject the joined room's context into PlayerPrefs (restored if the join fails). The room's session needs no
+        // entry: the scene takes it from the room's drawing (see DrawingSceneManager).
         string prevDrawing = PlayerPrefs.GetString("DrawingToLoad", "");
         int prevMode = PlayerPrefs.GetInt("LoadMode", 0);
 
         string drawingId = roomData.drawingID ?? "";
-        PlayerPrefs.SetString("CurrentSessionID", roomData.sessionID ?? "");
         PlayerPrefs.SetString("DrawingToLoad", drawingId);
         PlayerPrefs.SetInt("LoadMode", string.IsNullOrEmpty(drawingId) ? 0 : 1);
         PlayerPrefs.Save();
 
         void RestorePrefs()
         {
-            PlayerPrefs.SetString("CurrentSessionID", prevSession);
             PlayerPrefs.SetString("DrawingToLoad", prevDrawing);
             PlayerPrefs.SetInt("LoadMode", prevMode);
             PlayerPrefs.Save();

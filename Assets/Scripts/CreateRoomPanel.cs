@@ -23,7 +23,6 @@ public class CreateRoomPanel : MonoBehaviour
             feedbackText.text = "Generating code...";
 
             string roomName = string.IsNullOrWhiteSpace(roomNameInput.text) ? "My Room" : roomNameInput.text;
-            string sessionId = PlayerPrefs.GetString("CurrentSessionID", null);
             string drawingId = PlayerPrefs.GetString("DrawingToLoad", null);
             string hostId = AuthManager.GetCurrentUserID();
 
@@ -33,6 +32,9 @@ public class CreateRoomPanel : MonoBehaviour
                 createRoomButton.interactable = true;
                 return;
             }
+
+            // The room carries the session of the open scene, which is the session of the drawing that is shared.
+            string sessionId = await SessionContext.GetSceneSessionIdAsync();
 
             // Fallback to localhost, but grab the Steam ID if Steam is running
             string hostSteamAddress = "localhost";

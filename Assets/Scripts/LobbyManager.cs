@@ -74,12 +74,14 @@ public class LobbyManager : MonoBehaviour
             if (newDrawingButton != null) newDrawingButton.interactable = true;
 
             var userRole = await AuthManager.GetCurrentUserRoleAsync();
-            analysisManager.SetPanelsActive(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
             joinRoomPanel.SetActive(AuthManager.IsLoggedIn());
 
             // Wait for drawings to populate
             await SwitchToDrawingsPanelAsync();
             await EnablePlayerInfoPanelAsync(true);
+
+            // Loads the analysis data now that there is a login token; the panels appear for psychologists only.
+            await analysisManager.InitializeForUserAsync(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
         };
 
         authManager.OnLogout += () =>
@@ -157,8 +159,8 @@ public class LobbyManager : MonoBehaviour
 
             if (gameTypeDropdown != null) gameTypeDropdown.interactable = true;
             if (newDrawingButton != null) newDrawingButton.interactable = true;
-            analysisManager.SetPanelsActive(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
             joinRoomPanel.SetActive(true);
+            await analysisManager.InitializeForUserAsync(userRole == Assets.Database.DatabaseManagement.SQLiteDB.Role.Psychologist);
         }
     }
 

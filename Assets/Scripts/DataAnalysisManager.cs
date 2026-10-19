@@ -167,8 +167,8 @@ public class DataAnalysisManager : MonoBehaviour
             string newSessionId = await DatabaseManager.Instance.SaveSession(sessionName, sessionDescription, showBoy, showGirl);
             if (!string.IsNullOrEmpty(newSessionId))
             {
+                // The server makes a new session the active one, so there is nothing to store locally.
                 WriteFeedback("New session created successfully.");
-                PlayerPrefs.SetString("CurrentSessionID", newSessionId);
                 PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(showBoy));
                 PlayerPrefs.SetInt("ShowSadGirl", Convert.ToInt32(showGirl));
                 PlayerPrefs.Save();
@@ -199,6 +199,8 @@ public class DataAnalysisManager : MonoBehaviour
         public event Action OnCancelButtonClicked;
         public event Action OnSessionSelectionChanged;
 
+        private const int MaxDropdownSessions = 6;
+
         public List<KeyValuePair<string, string>> sessions = new();
         public string selectedSessionID = null;
 
@@ -217,7 +219,7 @@ public class DataAnalysisManager : MonoBehaviour
             selectedSessionID = sessions.Count > 0 ? sessions[0].Key : null;
 
             sessionNameDropdown.ClearOptions();
-            sessionNameDropdown.AddOptions(sessions.Take(6).ToList().Select(s => s.Value).ToList());
+            sessionNameDropdown.AddOptions(sessions.Select(s => s.Value).ToList());
             sessionNameDropdown.value = 0;
             sessionNameDropdown.onValueChanged.RemoveAllListeners();
             sessionNameDropdown.onValueChanged.AddListener((index) => {
@@ -244,7 +246,7 @@ public class DataAnalysisManager : MonoBehaviour
             sessions = await GetSessionsAsync();
             selectedSessionID = sessions.Count > 0 ? sessions[0].Key : null;
             sessionNameDropdown.ClearOptions();
-            sessionNameDropdown.AddOptions(sessions.Take(6).ToList().Select(s => s.Value).ToList());
+            sessionNameDropdown.AddOptions(sessions.Select(s => s.Value).ToList());
             sessionNameDropdown.value = 0;
             sessionNameDropdown.RefreshShownValue();
         }
@@ -255,14 +257,16 @@ public class DataAnalysisManager : MonoBehaviour
             reportPathInput.text = defaultReportPath;
         }
 
+        // Returns the newest sessions first. The server lists them oldest first, and only the newest ones fit into
+        // the dropdown, so only their names are requested.
         public async Task<List<KeyValuePair<string, string>>> GetSessionsAsync()
         {
             List<string> sessionIds = await DatabaseManager.Instance.GetAllSessionIds();
             List<KeyValuePair<string, string>> sessionList = new();
-            for (int i = 0; i < sessionIds.Count; ++i)
+            foreach (string sessionId in Enumerable.Reverse(sessionIds).Take(MaxDropdownSessions))
             {
-                string sessionName = await DatabaseManager.Instance.GetSessionNameById(sessionIds[i]);
-                sessionList.Add(new KeyValuePair<string, string>(sessionIds[i], sessionName));
+                string sessionName = await DatabaseManager.Instance.GetSessionNameById(sessionId);
+                sessionList.Add(new KeyValuePair<string, string>(sessionId, sessionName ?? sessionId));
             }
             return sessionList;
         }
@@ -314,7 +318,8 @@ public class DataAnalysisManager : MonoBehaviour
                 OnNextPageButtonClicked?.Invoke();
             });
 
-            await RefreshDrawingsContainerAsync();
+            // No session is selected yet (the manager sets it next), so there is nothing to fetch here.
+            ClearDrawingsContainer();
         }
 
         private async Task<List<DrawingMeta>> GetDrawingsForSessionAsync()
@@ -378,32 +383,49 @@ public class DataAnalysisManager : MonoBehaviour
     [SerializeField] private DataAnalysisPanel dataAnalysisPanel;
     [SerializeField] private SessionDrawingsPanel sessionDrawingsPanel;
 
-    async void Start()
+    // Loads everything the panels show. It needs a valid login token, so the LobbyManager calls it after the login
+    // (or at scene start when the player is already logged in) instead of this component loading in Start.
+    public async Task InitializeForUserAsync(bool isPsychologist)
     {
-        await psychologistDashboardPanel.InitializeAsync();
-        await newSessionPanel.InitializeAsync();
-        await dataAnalysisPanel.InitializeAsync();
-        await sessionDrawingsPanel.InitializeAsync();
-
-        bool showBoy = false;
-        bool showGirl = false;
-
-        if (!string.IsNullOrEmpty(dataAnalysisPanel.selectedSessionID))
+        if (isPsychologist)
         {
-            showBoy = await DatabaseManager.Instance.GetShowBoyForSession(dataAnalysisPanel.selectedSessionID);
-            showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
+            // The panels' InitializeAsync reset their events, so the events are subscribed again afterwards.
+            await psychologistDashboardPanel.InitializeAsync();
+            await newSessionPanel.InitializeAsync();
+            await dataAnalysisPanel.InitializeAsync();
+            await sessionDrawingsPanel.InitializeAsync();
+            SubscribeEvents();
         }
 
-            PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(showBoy));
-        PlayerPrefs.SetInt("ShowSadGirl", Convert.ToInt32(showGirl));
+        // Every role needs this: the game scenes show the sad child / sad girl models based on it.
+        await ApplySessionDisplayPrefsAsync(await GetCurrentSessionIDAsync());
+
+        if (isPsychologist)
+        {
+            sessionDrawingsPanel.selectedSessionId = dataAnalysisPanel.selectedSessionID;
+            await sessionDrawingsPanel.RefreshDrawingsContainerAsync();
+        }
+
+        // The login may have been lost (token expired) while the data was loading.
+        SetPanelsActive(isPsychologist && AuthManager.IsLoggedIn());
+    }
+
+    // Keeps the previous values when the session cannot be read, instead of hiding both models.
+    private static async Task ApplySessionDisplayPrefsAsync(string sessionId)
+    {
+        if (string.IsNullOrEmpty(sessionId)) return;
+
+        // A "not found" answer from the server deserializes into a Session without an id.
+        Session session = await DatabaseManager.Instance.GetSessionById(sessionId);
+        if (session == null || string.IsNullOrEmpty(session.id)) return;
+
+        PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(session.showBoy));
+        PlayerPrefs.SetInt("ShowSadGirl", Convert.ToInt32(session.showGirl));
         PlayerPrefs.Save();
+    }
 
-        sessionDrawingsPanel.selectedSessionId = dataAnalysisPanel.selectedSessionID;
-        await sessionDrawingsPanel.RefreshDrawingsContainerAsync();
-
-        Role userRole = await AuthManager.GetCurrentUserRoleAsync();
-        SetPanelsActive(AuthManager.IsLoggedIn() && userRole == Role.Psychologist);
-
+    private void SubscribeEvents()
+    {
         psychologistDashboardPanel.OnNewSessionButtonClicked += () =>
         {
             newSessionPanel.SetActive(true);
@@ -423,6 +445,12 @@ public class DataAnalysisManager : MonoBehaviour
             if (await newSessionPanel.CreateNewSessionAsync())
             {
                 await dataAnalysisPanel.RefreshSessionsAsync();
+
+                // The dropdown now selects the new session, so the drawings list has to follow it.
+                sessionDrawingsPanel.currentPage = 1;
+                sessionDrawingsPanel.selectedSessionId = dataAnalysisPanel.selectedSessionID;
+                await sessionDrawingsPanel.RefreshDrawingsContainerAsync();
+
                 SetPanelsActive(true);
                 psychologistDashboardPanel.activeSessionText.text = await GetCurrentSessionNameAsync();
                 psychologistDashboardPanel.sessionDescriptionText.text = await GetCurrentSessionDescriptionAsync();
@@ -452,6 +480,14 @@ public class DataAnalysisManager : MonoBehaviour
         {
             if (!string.IsNullOrEmpty(dataAnalysisPanel.selectedSessionID))
             {
+                // The active session is stored on the server, so that it is the same on every PC.
+                if (!await DatabaseManager.Instance.ActivateSession(dataAnalysisPanel.selectedSessionID))
+                {
+                    dataAnalysisPanel.WriteFeedbackError("Failed to set the session as current.");
+                    return;
+                }
+                dataAnalysisPanel.ClearFeedback();
+
                 bool _showBoy = false;
                 bool _showGirl = false;
 
@@ -461,7 +497,6 @@ public class DataAnalysisManager : MonoBehaviour
                     _showGirl = await DatabaseManager.Instance.GetShowGirlForSession(dataAnalysisPanel.selectedSessionID);
                 }
 
-                PlayerPrefs.SetString("CurrentSessionID", dataAnalysisPanel.selectedSessionID);
                 PlayerPrefs.SetInt("ShowSadChild", Convert.ToInt32(_showBoy));
                 PlayerPrefs.SetInt("ShowSadGirl", Convert.ToInt32(_showGirl));
                 PlayerPrefs.Save();
@@ -493,19 +528,11 @@ public class DataAnalysisManager : MonoBehaviour
         sessionDrawingsPanel.SetActive(false);
     }
 
+    // The active session of the server (its default session while no other one is active). It is not stored on this PC,
+    // so a logout or another PC never changes it.
     public static async Task<string> GetCurrentSessionIDAsync()
     {
-        string sessionId = PlayerPrefs.GetString("CurrentSessionID", null);
-        if (string.IsNullOrEmpty(sessionId))
-        {
-            sessionId = await DatabaseManager.Instance.GetLatestSessionId();
-            if (!string.IsNullOrEmpty(sessionId))
-            {
-                PlayerPrefs.SetString("CurrentSessionID", sessionId);
-                PlayerPrefs.Save();
-            }
-        }
-        return sessionId;
+        return await DatabaseManager.Instance.GetActiveSessionId();
     }
 
     public static async Task<string> GetCurrentSessionNameAsync()

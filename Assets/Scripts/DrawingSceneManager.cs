@@ -18,6 +18,9 @@ public class DrawingSceneManager : MonoBehaviour
     {
         SceneManager.SetActiveScene(gameObject.scene);
 
+        // The scene's session is decided once, below: the loaded drawing's session, or else the active one.
+        SessionContext.SceneSessionId = null;
+
         drawingId = PlayerPrefs.GetString("DrawingToLoad", null);
         if (!string.IsNullOrEmpty(drawingId))
         {
@@ -30,13 +33,13 @@ public class DrawingSceneManager : MonoBehaviour
             _ = ClearDrawingAsync();
         }
 
-        // Fetch session info asynchronously
-        string activeSessionId = await DataAnalysisManager.GetCurrentSessionIDAsync();
+        // A loaded drawing has set its own session; a new drawing starts in the session that is active now.
+        string sceneSessionId = await SessionContext.GetSceneSessionIdAsync();
 
-        if (!string.IsNullOrEmpty(activeSessionId))
+        if (!string.IsNullOrEmpty(sceneSessionId))
         {
             // Handle Sad Child visibility
-            bool showSadChild = await DatabaseManager.Instance.GetShowBoyForSession(activeSessionId);
+            bool showSadChild = await DatabaseManager.Instance.GetShowBoyForSession(sceneSessionId);
             GameObject sadChild = GameObject.Find(SadBoyName);
             if (sadChild != null)
             {
@@ -45,7 +48,7 @@ public class DrawingSceneManager : MonoBehaviour
             }
 
             // Handle Sad Girl visibility
-            bool showSadGirl = await DatabaseManager.Instance.GetShowGirlForSession(activeSessionId);
+            bool showSadGirl = await DatabaseManager.Instance.GetShowGirlForSession(sceneSessionId);
             GameObject sadGirl = GameObject.Find(SadGirlName);
             if (sadGirl != null)
             {
@@ -65,6 +68,9 @@ public class DrawingSceneManager : MonoBehaviour
             Debug.LogError($"DrawingSceneManager: Failed to load drawing data for ID: {id}");
             return;
         }
+
+        // The drawing stays in its own session, even if that is no longer the active one.
+        if (!string.IsNullOrEmpty(drawingData.metadata?.sessionID)) SessionContext.SceneSessionId = drawingData.metadata.sessionID;
 
         VRDrawing vrDrawingComponent = await WaitForVRDrawingAsync();
         if (vrDrawingComponent == null)
